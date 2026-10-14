@@ -16,10 +16,10 @@ import xapi from "xapi";
  */
 
 // CONFIG:start
-const MACRO_NAME = "my-macro";
-const WEBAPP_URL = "https://wxsd-sales.github.io/my-macro/webapp/";
-const HAS_BUTTON = true;
-const BUTTON_NAME = "My Macro";
+const MACRO_NAME = "mtr-controller-pwa";
+const WEBAPP_URL = "https://wxsd-sales.github.io/mtr-controller-pwa/webapp/";
+const HAS_BUTTON = false;
+const BUTTON_NAME = "MTR Controller PWA";
 // CONFIG:end
 
 const PANEL_ID = `${MACRO_NAME}-open`;

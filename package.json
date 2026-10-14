@@ -1,9 +1,9 @@
 {
-  "name": "my-macro",
+  "name": "mtr-controller-pwa",
   "version": "1.0.0",
-  "description": "One sentence description of what this macro does.",
+  "description": "Example Persistant Web App which gives basic controls of an MTR device",
   "license": "MIT",
-  "author": "",
+  "author": "William Mills - wimills@cisco.com",
   "type": "module",
   "main": "macros/main.js",
   "scripts": {

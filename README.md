@@ -1,12 +1,12 @@
 <!-- title:start -->
 
-# My Macro
+# MTR Controller PWA
 
 <!-- title:end -->
 
 <!-- description:start -->
 
-One sentence description of what this macro does.
+Example Persistant Web App which gives basic controls of an MTR device
 <!-- description:end -->
 
 A template for Cisco RoomOS (Webex) collaboration macros, paired with two static
@@ -20,8 +20,8 @@ web apps published to GitHub Pages: a configuration **wizard** and an optional
 
 <!-- urls:start -->
 
-- Wizard: https://wxsd-sales.github.io/my-macro/wizard/
-- Web app: https://wxsd-sales.github.io/my-macro/webapp/
+- Wizard: https://wxsd-sales.github.io/mtr-controller-pwa/wizard/
+- Web app: https://wxsd-sales.github.io/mtr-controller-pwa/webapp/
 
 <!-- urls:end -->
 
@@ -128,4 +128,4 @@ Everything included is for demo and Proof of Concept purposes only. Use of the s
 
 ## Questions
 
-Please contact the WXSD team at [wxsd@external.cisco.com](mailto:wxsd@external.cisco.com?subject=my-macro) for questions. Or, if you're a Cisco internal employee, reach out to us on the Webex App via our bot (globalexpert@webex.bot). In the "Engagement Type" field, choose the "API/SDK Proof of Concept Integration Development" option to make sure you reach our team.
+Please contact the WXSD team at [wxsd@external.cisco.com](mailto:wxsd@external.cisco.com?subject=mtr-controller-pwa) for questions. Or, if you're a Cisco internal employee, reach out to us on the Webex App via our bot (globalexpert@webex.bot). In the "Engagement Type" field, choose the "API/SDK Proof of Concept Integration Development" option to make sure you reach our team.

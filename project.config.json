@@ -1,10 +1,12 @@
 {
   "$schema": "./project.config.schema.json",
-  "name": "my-macro",
-  "title": "My Macro",
-  "description": "One sentence description of what this macro does.",
-  "author": "",
+  "name": "mtr-controller-pwa",
+  "title": "MTR Controller PWA",
+  "description": "Example Persistant Web App which gives basic controls of an MTR device",
+  "author": "William Mills - wimills@cisco.com",
   "org": "wxsd-sales",
-  "repo": "my-macro",
-  "webapp": true
+  "repo": "mtr-controller-pwa",
+  "webapp": true,
+  "hasButton": false,
+  "buttonName": ""
 }
