@@ -307,10 +307,18 @@ describe("macros/main.js account roles", () => {
     const started = await startMacro({ mtr: true, widgetValue: "Auto" });
     const { xapi, macro } = started;
     xapi.Command.UserManagement.User.Modify.mockClear();
-    xapi.Command.UserManagement.User.Get.mockResolvedValue({
+    // Behave like a device: Modify changes the roles that Get then reports
+    let roles = rolesFor(macro.ACCOUNT_ROLES);
+    xapi.Command.UserManagement.User.Get.mockImplementation(async () => ({
       Username: "pwa-controller",
-      Roles: rolesFor(macro.ACCOUNT_ROLES),
-    });
+      Roles: roles,
+    }));
+    xapi.Command.UserManagement.User.Modify.mockImplementation(
+      async ({ AddRole = [], RemoveRole = [] }) => {
+        roles = [...roles.filter((r) => !RemoveRole.includes(r)), ...AddRole];
+        return { status: "OK" };
+      },
+    );
     return started;
   }
 
@@ -373,6 +381,19 @@ describe("macros/main.js account roles", () => {
       Username: "pwa-controller",
       RemoveRole: ["Audit"],
     });
+  });
+
+  it("does not sync again because of its own URL write, even if the roles never change", async () => {
+    const { xapi, macro } = await withRoles((roles) => ["Admin", ...roles]);
+    // A device that ignores Modify: Get keeps reporting the wrong roles
+    xapi.Command.UserManagement.User.Modify.mockImplementation(async () => ({
+      status: "OK",
+    }));
+
+    await macro.syncUrl();
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    expect(xapi.Command.UserManagement.User.Modify).toHaveBeenCalledTimes(1);
   });
 
   it("does not touch the account or URL when the roles cannot be read", async () => {

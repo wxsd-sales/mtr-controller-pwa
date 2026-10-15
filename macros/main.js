@@ -40,6 +40,10 @@ const SELECT_WIDGET_ID = `${PANEL_ID}-select`;
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+// The URL this macro last wrote. The device reports every change to the URL,
+// including ours; ignoring our own write stops a sync from triggering another.
+let lastWrittenUrl = "";
+
 // Minimal ASCII base64, as btoa/atob are not guaranteed in the macro runtime.
 function base64Encode(input) {
   let out = "";
@@ -289,9 +293,9 @@ async function syncUrl(selectedMode) {
   // (with a new timestamp) to make the web app reload and reconnect.
   if (upToDate && !rolesChanged) return;
 
-  await xapi.Config.UserInterface.HomeScreen.Peripherals.WebApp.URL.set(
-    buildUrl(wanted),
-  );
+  const url = buildUrl(wanted);
+  lastWrittenUrl = url;
+  await xapi.Config.UserInterface.HomeScreen.Peripherals.WebApp.URL.set(url);
   console.log(
     `${MACRO_NAME}: updated PWA URL (address ${address}, mtr ${mtrDevice}, mode ${mode})`,
   );
@@ -433,7 +437,9 @@ async function init() {
 
   xapi.Status.Network[1].IPv4.Address.on(scheduleSync);
   xapi.Status.Network[1].IPv6.Address.on(scheduleSync);
-  xapi.Config.UserInterface.HomeScreen.Peripherals.WebApp.URL.on(scheduleSync);
+  xapi.Config.UserInterface.HomeScreen.Peripherals.WebApp.URL.on((url) => {
+    if (url !== lastWrittenUrl) scheduleSync();
+  });
 
   console.log(`${MACRO_NAME}: started`);
 }
