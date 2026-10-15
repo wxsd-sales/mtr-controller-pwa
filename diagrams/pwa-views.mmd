@@ -1,0 +1,87 @@
+flowchart LR
+
+    VIEW_HOME["view-home"]
+    VIEW_HALFWAKE["view-halfwake"]
+    VIEW_STANDBY["view-standby<br/>(black screen)"]
+    VIEW_MTR["view-call<br/>Microsoft Teams call"]
+    VIEW_ROOMOS["view-call<br/>Call in progress<br/>(RoomOS)"]
+
+    VIEW_HOME -->|"Standby = Halfwake"| VIEW_HALFWAKE
+    VIEW_HALFWAKE -->|"Standby = Standby"| VIEW_STANDBY
+    VIEW_STANDBY -->|"Standby = Off"| VIEW_HOME
+    VIEW_HALFWAKE -->|"Tap screen:<br/>Standby.Deactivate"| VIEW_HOME
+
+    VIEW_HOME -->|"Teams InCall = True"| VIEW_MTR
+    VIEW_MTR -->|"InCall = False"| VIEW_HOME
+    VIEW_HOME -->|"ActiveCalls 1 or more"| VIEW_ROOMOS
+    VIEW_ROOMOS -->|"ActiveCalls = 0"| VIEW_HOME
+
+    %% Animation (read by scripts/build-mermaid-svgs.mjs; see its header comment for the syntax)
+    %% @timing step=0.7 hold=1.6 gap=0.5 fade=0.2 delay=1.2
+    %% @scenario Standby & Halfwake
+    %%   node VIEW_HOME
+    %%   delay
+    %%   group
+    %%     edge VIEW_HOME -> VIEW_HALFWAKE
+    %%     node VIEW_HALFWAKE
+    %%     node VIEW_HOME reset
+    %%   endgroup
+    %%   delay
+    %%   group
+    %%     edge VIEW_HALFWAKE -> VIEW_STANDBY
+    %%     node VIEW_STANDBY
+    %%     node VIEW_HALFWAKE reset
+    %%     edge VIEW_HOME -> VIEW_HALFWAKE reset
+    %%   endgroup
+    %%   delay
+    %%   group
+    %%     edge VIEW_STANDBY -> VIEW_HOME
+    %%     node VIEW_HOME
+    %%     node VIEW_STANDBY reset
+    %%     edge VIEW_HALFWAKE -> VIEW_STANDBY reset
+    %%   endgroup
+    %% @scenario Tap Halfwake Screen
+    %%   node VIEW_HOME
+    %%   delay
+    %%   group
+    %%     edge VIEW_HOME -> VIEW_HALFWAKE
+    %%     node VIEW_HALFWAKE
+    %%     node VIEW_HOME reset
+    %%   endgroup
+    %%   delay
+    %%   group
+    %%     edge VIEW_HALFWAKE -> VIEW_HOME
+    %%     node VIEW_HOME
+    %%     node VIEW_HALFWAKE reset
+    %%     edge VIEW_HOME -> VIEW_HALFWAKE reset
+    %%   endgroup
+    %% @scenario Microsoft Teams Call
+    %%   node VIEW_HOME
+    %%   delay
+    %%   group
+    %%     edge VIEW_HOME -> VIEW_MTR
+    %%     node VIEW_MTR
+    %%     node VIEW_HOME reset
+    %%   endgroup
+    %%   delay 2
+    %%   group
+    %%     edge VIEW_MTR -> VIEW_HOME
+    %%     node VIEW_HOME
+    %%     node VIEW_MTR reset
+    %%     edge VIEW_HOME -> VIEW_MTR reset
+    %%   endgroup
+    %% @scenario RoomOS Call
+    %%   node VIEW_HOME
+    %%   delay
+    %%   group
+    %%     edge VIEW_HOME -> VIEW_ROOMOS
+    %%     node VIEW_ROOMOS
+    %%     node VIEW_HOME reset
+    %%   endgroup
+    %%   delay 2
+    %%   group
+    %%     edge VIEW_ROOMOS -> VIEW_HOME
+    %%     node VIEW_HOME
+    %%     node VIEW_ROOMOS reset
+    %%     edge VIEW_HOME -> VIEW_ROOMOS reset
+    %%   endgroup

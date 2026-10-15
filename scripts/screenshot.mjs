@@ -4,9 +4,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { platform } from "node:os";
 import { startStaticServer } from "./server.mjs";
+import { DEMO_ADDRESS, DEMO_SCENES } from "../webapp/demo.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_DIR = join(ROOT, "assets");
+// SCREENSHOT_OUT redirects the output, e.g. to try the script without touching assets/.
+const OUT_DIR = process.env.SCREENSHOT_OUT
+  ? resolve(process.env.SCREENSHOT_OUT)
+  : join(ROOT, "assets");
 const WIDTH = Number(process.env.SCREENSHOT_WIDTH) || 1280;
 const HEIGHT = Number(process.env.SCREENSHOT_HEIGHT) || 800;
 
@@ -68,7 +72,7 @@ const BENIGN_STDERR_PATTERNS = [
   /task_policy_set TASK_(CATEGORY|SUPPRESSION)_POLICY/,
 ];
 
-function capture(chromeBin, url, outPath) {
+function capture(chromeBin, url, outPath, height = HEIGHT) {
   return new Promise((resolvePromise, reject) => {
     const args = [
       "--headless=new",
@@ -76,7 +80,7 @@ function capture(chromeBin, url, outPath) {
       "--no-sandbox",
       "--hide-scrollbars",
       "--force-color-profile=srgb",
-      `--window-size=${WIDTH},${HEIGHT}`,
+      `--window-size=${WIDTH},${height}`,
       "--virtual-time-budget=2500",
       `--screenshot=${outPath}`,
       url,
@@ -113,22 +117,57 @@ function capture(chromeBin, url, outPath) {
 const chromeBin = resolveChrome();
 mkdirSync(OUT_DIR, { recursive: true });
 
-const targets = [{ path: "/wizard/", name: "wizard" }];
-if (existsSync(join(ROOT, "webapp", "index.html"))) {
-  targets.push({ path: "/webapp/", name: "webapp" });
-}
+// The web app is captured once per demo scene (webapp/demo.js), in the order the
+// README presents them: MTR out of call, MTR in call, RoomOS for comparison, then
+// the connecting and error screens. Each URL carries { demo: "<scene>" } in the
+// hash, so no device is needed. bad-hash is not a scene: it is a hash that is
+// missing a parameter, which shows the web app's error view.
+const encodeHash = (value) =>
+  Buffer.from(JSON.stringify(value)).toString("base64");
+const webappScenes = [
+  ...Object.keys(DEMO_SCENES).map((name) => ({
+    name,
+    hash: encodeHash({ demo: name }),
+  })),
+  {
+    name: "bad-hash",
+    hash: encodeHash({ username: "pwa-controller", address: DEMO_ADDRESS }),
+  },
+];
 
-// Force each theme via the "#theme=" hash so captures are deterministic and do
-// not depend on the CI runner's OS colour-scheme preference.
+// The wizard is captured on each of its three tabs, in both themes. The theme is
+// forced via the "#theme=" hash so the result does not depend on the CI runner's
+// OS colour-scheme preference, and "#tab=" opens the tab (see wizard.js). The
+// window is tall enough to show the whole tab.
 const themes = ["light", "dark"];
+const wizardTabs = [
+  { name: "configuration", tab: "general", height: 900 },
+  { name: "export-macro", tab: "export", height: 650 },
+  { name: "export-webapp", tab: "export-webapp", height: 1000 },
+];
 
 const { url, close } = await startStaticServer({ root: ROOT, port: 0 });
 try {
-  for (const target of targets) {
+  for (const { name, tab, height } of wizardTabs) {
     for (const theme of themes) {
-      const outName = `${target.name}-${theme}.png`;
-      const outPath = join(OUT_DIR, outName);
-      await capture(chromeBin, `${url}${target.path}#theme=${theme}`, outPath);
+      const outName = `wizard-${name}-${theme}.png`;
+      await capture(
+        chromeBin,
+        `${url}/wizard/#theme=${theme}&tab=${tab}`,
+        join(OUT_DIR, outName),
+        height,
+      );
+      console.log(`Captured ${outName}`);
+    }
+  }
+  if (existsSync(join(ROOT, "webapp", "index.html"))) {
+    for (const { name, hash } of webappScenes) {
+      const outName = `webapp-${name}.png`;
+      await capture(
+        chromeBin,
+        `${url}/webapp/#${hash}`,
+        join(OUT_DIR, outName),
+      );
       console.log(`Captured ${outName}`);
     }
   }

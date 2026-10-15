@@ -1,0 +1,40 @@
+flowchart LR
+
+    HASH_OK(["Hash parameters valid"]) --> CONNECTING
+    CONNECTING["view-connecting<br/>Connecting to address"]
+    CONN_RESULT{"Connection<br/>result"}
+    CONN_FAILED(["Show error<br/>(error / closed)"])
+    RETRY(["Wait, then retry"])
+    READY(["Connected:<br/>query & subscribe xStatus"])
+
+    CONNECTING --> CONN_RESULT
+    CONN_RESULT -->|"Error / close"| CONN_FAILED
+    CONN_FAILED --> RETRY
+    RETRY --> CONNECTING
+    CONN_RESULT -->|"Ready"| READY
+
+    %% Animation (read by scripts/build-mermaid-svgs.mjs; see its header comment for the syntax)
+    %% @timing step=0.7 hold=1.6 gap=0.5 fade=0.2 delay=1.2
+    %% @scenario Failed to Connect
+    %%   node HASH_OK
+    %%   edge HASH_OK -> CONNECTING
+    %%   node CONNECTING | view-connecting | Connecting To | Address
+    %%   edge CONNECTING -> CONN_RESULT
+    %%   group
+    %%     node CONN_RESULT ended
+    %%     edge CONN_RESULT -> CONN_FAILED ended
+    %%     node CONN_FAILED ended
+    %%     node CONNECTING ended | view-connecting | Connecting To | Address
+    %%   endgroup
+    %%   delay
+    %%   edge CONN_FAILED -> RETRY
+    %%   node RETRY
+    %%   edge RETRY -> CONNECTING
+    %% @scenario Connected
+    %%   node HASH_OK
+    %%   edge HASH_OK -> CONNECTING
+    %%   node CONNECTING | view-connecting | Connecting To | Address
+    %%   edge CONNECTING -> CONN_RESULT
+    %%   node CONN_RESULT
+    %%   edge CONN_RESULT -> READY
+    %%   node READY

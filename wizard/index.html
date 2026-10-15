@@ -181,7 +181,20 @@
             data-tab-target="export"
           >
             <span class="icon icon-save-regular" aria-hidden="true"></span>
-            <span class="tab__label">Export</span>
+            <span class="tab__label">Export Macro</span>
+          </button>
+          <button
+            class="tab"
+            id="tab-export-webapp"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="export-webapp"
+            tabindex="-1"
+            data-tab-target="export-webapp"
+          >
+            <span class="icon icon-download-bold" aria-hidden="true"></span>
+            <span class="tab__label">Export Web App</span>
           </button>
         </div>
 
@@ -196,9 +209,9 @@
           >
             <h2>Macro Settings</h2>
             <p>
-              Configure the macro, then open the <strong>Export</strong> tab to
-              copy the generated <code>CONFIG</code> block into
-              <code>macros/main.js</code>.
+              Configure the macro, then open the
+              <strong>Export Macro</strong> tab to copy the generated
+              <code>CONFIG</code> block into <code>macros/main.js</code>.
             </p>
 
             <form class="config-form" id="wizard-form" autocomplete="off">
@@ -206,12 +219,13 @@
                 <div class="toggle-row">
                   <div class="toggle-row__text">
                     <span class="toggle-row__label" id="has-button-label"
-                      >Home screen button</span
+                      >Mode selector button</span
                     >
                     <span class="toggle-row__hint"
-                      >Adds a button to the device home screen that opens the
-                      web app. Turn this off if the macro doesn't need
-                      one.</span
+                      >Adds a control panel button for switching the web app
+                      between Auto, RoomOS Only and MTR Only, e.g. to demo the
+                      MTR look on a RoomOS device. Turn this off to keep the
+                      default mode fixed.</span
                     >
                   </div>
                   <label class="switch">
@@ -222,6 +236,30 @@
                       name="has-button"
                       aria-labelledby="has-button-label"
                       checked
+                    />
+                    <span class="switch__track"
+                      ><span class="switch__thumb"></span
+                    ></span>
+                  </label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-row__text">
+                    <span class="toggle-row__label" id="show-calendar-label"
+                      >Room calendar</span
+                    >
+                    <span class="toggle-row__hint"
+                      >Shows the room's booked meetings on the MTR home screen,
+                      with the action icons on the left. Off centres the icons
+                      on the screen.</span
+                    >
+                  </div>
+                  <label class="switch">
+                    <input
+                      class="switch__input"
+                      type="checkbox"
+                      id="show-calendar"
+                      name="show-calendar"
+                      aria-labelledby="show-calendar-label"
                     />
                     <span class="switch__track"
                       ><span class="switch__thumb"></span
@@ -241,8 +279,28 @@
                   placeholder="My Macro"
                 />
                 <span class="field__hint"
-                  >Shown on the device home screen and used as the WebView
-                  title.</span
+                  >The label of the control panel button.</span
+                >
+              </div>
+              <div class="field">
+                <label class="field__label" for="default-mode"
+                  >Default mode</label
+                >
+                <select
+                  class="field__input"
+                  id="default-mode"
+                  name="default-mode"
+                >
+                  <option value="Auto">Auto</option>
+                  <option value="RoomOS Only">RoomOS Only</option>
+                  <option value="MTR Only">MTR Only</option>
+                </select>
+                <span class="field__hint"
+                  >Auto themes the web app like an MTR controller when the
+                  device is in MTR mode. RoomOS Only and MTR Only force one
+                  look. With the button on, this is the starting selection and
+                  anyone can change it from the control panel; with it off, it
+                  is fixed.</span
                 >
               </div>
               <div class="field">
@@ -255,7 +313,8 @@
                   placeholder="https://org.github.io/repo/webapp/"
                 />
                 <span class="field__hint"
-                  >The page the macro opens in an on-device WebView.</span
+                  >The web app the macro points the Room Navigator's persistent
+                  web app setting at.</span
                 >
               </div>
             </form>
@@ -270,7 +329,7 @@
             tabindex="0"
             hidden
           >
-            <h2>Macro Config</h2>
+            <h2>Export Macro</h2>
             <p>
               Copy this block and paste it between the
               <code>// CONFIG:start</code> and
@@ -310,6 +369,93 @@
                 aria-live="polite"
               ></p>
             </div>
+          </section>
+
+          <!-- Export Web App -->
+          <section
+            class="webapp-function"
+            id="export-webapp"
+            role="tabpanel"
+            aria-labelledby="tab-export-webapp"
+            tabindex="0"
+            hidden
+          >
+            <h2>Export Web App</h2>
+            <p>
+              By default the macro points the Room Navigator at the copy of the
+              web app hosted on GitHub Pages. To host your own copy, for example
+              on an internal web server the Navigator can reach, download the
+              bundle below. It is a static site: the web app, its scripts and
+              its icon, with the same CDN links for jsxapi and the Momentum
+              icons and theme.
+            </p>
+
+            <div class="field">
+              <label class="field__label" for="host-url"
+                >Where will you host it?</label
+              >
+              <input
+                class="field__input"
+                type="url"
+                id="host-url"
+                name="host-url"
+                placeholder="https://pwa.example.com/mtr-controller-pwa/"
+              />
+              <span class="field__hint"
+                >Optional. This is the same value as the Web app URL on the
+                General tab, so the macro you export points at your
+                server.</span
+              >
+            </div>
+
+            <div class="step-actions">
+              <button
+                id="download-webapp-button"
+                type="button"
+                class="icon-button icon-button--with-label secondary-button"
+              >
+                <span class="icon icon-download-bold" aria-hidden="true"></span>
+                <span class="icon-button__label">Download web app (.zip)</span>
+              </button>
+            </div>
+            <p
+              class="export-status"
+              id="webapp-export-status"
+              role="status"
+              aria-live="polite"
+            ></p>
+
+            <h3>Example: hosting on Microsoft IIS</h3>
+            <ol class="steps">
+              <li>
+                An admin downloads the bundle here and unzips it into a folder
+                on the IIS server, for example
+                <code>C:\inetpub\wwwroot\mtr-controller-pwa</code>.
+              </li>
+              <li>
+                In IIS Manager, add a website (or a virtual directory or
+                application under an existing site) whose physical path is that
+                folder, with an HTTPS binding the Room Navigator trusts.
+              </li>
+              <li>
+                Browse to the site. Seeing "No parameters found in the URL hash"
+                is correct: the macro supplies the parameters. There is no
+                server side code to configure.
+              </li>
+              <li>
+                Enter the site's URL as the Web app URL (above, or on the
+                General tab), then export the macro again and load it on the MTR
+                device.
+              </li>
+            </ol>
+            <p>
+              From then on the macro keeps updating the URL hash on your
+              server's address, with the account, device IP address, mode and
+              calendar setting, exactly as it does for the GitHub Pages copy.
+              The bundle still loads jsxapi and the Momentum icons from public
+              CDNs; on a network without internet access, host those too and
+              update the links at the top of <code>index.html</code>.
+            </p>
           </section>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { stdin, stdout } from "node:process";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyConfig } from "./apply-config.mjs";
+import { DEFAULT_MODE, MODE_OPTIONS } from "../wizard/snippet.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_PATH = join(ROOT, "project.config.json");
@@ -51,6 +52,21 @@ async function ask(label, fallback) {
   return answer || fallback || "";
 }
 
+// Re-asks until the answer is one of the modes (case-insensitive).
+async function askMode() {
+  for (;;) {
+    const answer = await ask(
+      `Default web app mode (${MODE_OPTIONS.join(" / ")})`,
+      current.defaultMode ?? DEFAULT_MODE,
+    );
+    const match = MODE_OPTIONS.find(
+      (option) => option.toLowerCase() === answer.toLowerCase(),
+    );
+    if (match) return match;
+    console.log(`  Please enter one of: ${MODE_OPTIONS.join(", ")}`);
+  }
+}
+
 console.log(
   "Configure this macro template. Press Enter to accept the default.\n",
 );
@@ -81,8 +97,14 @@ const buttonName = hasButton
     )
   : current.buttonName || "";
 
-rl.close();
+const defaultMode = await askMode();
+const showCalendarAnswer = await ask(
+  "Show a room calendar on the MTR home screen? (y/n)",
+  current.showCalendar === true ? "y" : "n",
+);
+const showCalendar = /^y(es)?$/i.test(showCalendarAnswer);
 
+rl.close();
 const config = {
   $schema: current.$schema ?? "./project.config.schema.json",
   name,
@@ -93,6 +115,8 @@ const config = {
   repo,
   webapp: /^y(es)?$/i.test(webappAnswer),
   hasButton,
+  defaultMode,
+  showCalendar,
   buttonName,
 };
 

@@ -7,6 +7,8 @@
   "org": "wxsd-sales",
   "repo": "mtr-controller-pwa",
   "webapp": true,
-  "hasButton": false,
+  "hasButton": true,
+  "defaultMode": "Auto",
+  "showCalendar": false,
   "buttonName": ""
 }

@@ -1,0 +1,158 @@
+flowchart LR
+
+    USER(["👤 User<br/>(optional)"]) -->|"Taps UI Extension"| MACRO
+
+    subgraph MACRO["Macro"]
+        direction LR
+
+        
+
+        subgraph MACRO_INIT_SUB["Initialization Function"]
+            direction LR
+            MACRO_INIT_WEBENGINE(["Enable WebEngine & <br/>AllowDeviceCertificate"])
+            MACRO_INIT_PANEL(["Save UI Extension Panel<br/>(Optional)"])
+            MACRO_INIT_SYNC(["Trigger Sync"])
+            MACRO_INIT_WEBENGINE -->MACRO_INIT_PANEL
+            MACRO_INIT_PANEL -->MACRO_INIT_SYNC
+        end
+
+        subgraph WIDGET_CLICKED_SUB["Process Widget Events Function (optional)"]
+            direction LR
+            WIDGET_CLICKED(["Widget Clicked"])
+            VALID_WIDGET_ID{"Valid<br>Widget ID"}
+            WIDGET_SYNC(["Trigger Sync"])
+            WIDGET_IGNORE(["Ignore Event"])
+            WIDGET_CLICKED --> VALID_WIDGET_ID
+            VALID_WIDGET_ID -->|"Yes"| WIDGET_SYNC
+            VALID_WIDGET_ID -->|"No"| WIDGET_IGNORE
+        end
+
+
+        subgraph SUBSCRIBED_SUB["xStatus & xConfig Subscriptions Monitor"]
+            direction LR
+            SUBSCRIBED_PWA_URL(["PWA Web App<br/>URL xConfig"])
+            SUBSCRIBED_IP_ADDRESS(["IPv4/6 Address<br/>xStatuses"]) 
+            SUBSCRIBED_SCHEDULE_SYNC["Schedule Synce<br/>(debounded)"]
+            SUBSCRIBED_SYNC(["Trigger Sync"])
+            SUBSCRIBED_PWA_URL --> SUBSCRIBED_SCHEDULE_SYNC
+            SUBSCRIBED_IP_ADDRESS --> SUBSCRIBED_SCHEDULE_SYNC
+            SUBSCRIBED_SCHEDULE_SYNC --> SUBSCRIBED_SYNC
+        end
+
+
+        subgraph SYNC_URL["Sync URL Function"]
+            direction TB
+            GET_ADDRESS["Get Addresses"]
+            GET_PWA_URL["Get PWA URL Hash"]
+            GET_ACCOUNT_DETAILS["Get Local<br/>Account Details"]
+            GET_ADDITIONAL_PARAMETERS["Get Stored/Updated Parameters"]
+            UP_TO_DATE{"PWA URL<br/>Requires Update?"}
+            UPDATE_URL("Update PWA URL Hash")
+            DONT_UPDATE_URL("Don't Update URL Hash")
+            GET_ADDRESS --> GET_PWA_URL
+            GET_PWA_URL --> GET_ACCOUNT_DETAILS
+            GET_ACCOUNT_DETAILS --> GET_ADDITIONAL_PARAMETERS
+            GET_ADDITIONAL_PARAMETERS --> UP_TO_DATE
+            UP_TO_DATE --> |"No"| DONT_UPDATE_URL
+            UP_TO_DATE --> |"Yes"| UPDATE_URL
+        end
+
+       
+
+        SUBSCRIBED_SUB -->|"Tigger Sync"| SYNC_URL
+        WIDGET_CLICKED_SUB -->|"Tigger Sync<br/>(parameter change)"| SYNC_URL
+        MACRO_INIT_SUB -->|"Tigger Sync"| SYNC_URL
+
+
+
+    end
+
+    WIDGET_CLICKED@{ shape: manual-input}
+    SUBSCRIBED_SCHEDULE_SYNC@{ shape: delay}
+    
+    %% Animation (read by scripts/build-mermaid-svgs.mjs; see its header comment for the syntax)
+    %% @scenario Macro Initialization
+    %%   group
+    %%      node MACRO_INIT_WEBENGINE
+    %%      edge MACRO_INIT_WEBENGINE -> MACRO_INIT_PANEL
+    %%   endgroup
+    %%   group 
+    %%      node MACRO_INIT_PANEL
+    %%      edge MACRO_INIT_PANEL -> MACRO_INIT_SYNC
+    %%   endgroup
+    %%   group 
+    %%      node MACRO_INIT_SYNC
+    %%      edge MACRO_INIT_SUB -> SYNC_URL
+    %%   endgroup
+    %%   group 
+    %%   node GET_ADDRESS
+    %%   edge GET_ADDRESS -> GET_PWA_URL
+    %%   endgroup
+    %%   group 
+    %%   node GET_PWA_URL
+    %%   edge GET_PWA_URL -> GET_ACCOUNT_DETAILS
+    %%   endgroup
+    %%   group 
+    %%   node GET_ACCOUNT_DETAILS
+    %%   edge GET_ACCOUNT_DETAILS -> GET_ADDITIONAL_PARAMETERS
+    %%   endgroup
+    %%   group 
+    %%   node GET_ADDITIONAL_PARAMETERS
+    %%   edge GET_ADDITIONAL_PARAMETERS -> UP_TO_DATE
+    %%   endgroup
+    %%   group
+    %%     node UP_TO_DATE ended
+    %%     edge UP_TO_DATE -> DONT_UPDATE_URL ended
+    %%     node DONT_UPDATE_URL ended
+    %%   endgroup
+    %%   delay 1
+    %%   group
+    %%     node DONT_UPDATE_URL reset
+    %%     edge UP_TO_DATE -> DONT_UPDATE_URL reset
+    %%     node UP_TO_DATE
+    %%     edge UP_TO_DATE -> UPDATE_URL
+    %%     node UPDATE_URL 
+    %%   endgroup
+    %% @scenario User Select Option Change (optional)
+    %%   group
+    %%      node USER
+    %%      edge USER -> MACRO
+    %%   endgroup
+    %%   group
+    %%      node WIDGET_CLICKED
+    %%      edge WIDGET_CLICKED -> VALID_WIDGET_ID
+    %%   endgroup
+    %%   group
+    %%     node VALID_WIDGET_ID ended
+    %%     edge VALID_WIDGET_ID -> WIDGET_IGNORE ended
+    %%     node WIDGET_IGNORE ended
+    %%   endgroup
+    %%   delay 1
+    %%   group
+    %%     node VALID_WIDGET_ID
+    %%     edge VALID_WIDGET_ID -> WIDGET_IGNORE reset
+    %%     node WIDGET_IGNORE reset
+    %%     edge VALID_WIDGET_ID -> WIDGET_SYNC
+    %%     node WIDGET_SYNC
+    %%   endgroup
+    %%   group
+    %%      edge WIDGET_CLICKED_SUB -> SYNC_URL
+    %%      cluster SYNC_URL
+    %%   endgroup
+    %% @scenario IP Address / PWA URL Config Changed
+    %%   group
+    %%      node SUBSCRIBED_IP_ADDRESS
+    %%      edge SUBSCRIBED_IP_ADDRESS -> SUBSCRIBED_SCHEDULE_SYNC
+    %%      node SUBSCRIBED_PWA_URL
+    %%      edge SUBSCRIBED_PWA_URL -> SUBSCRIBED_SCHEDULE_SYNC
+    %%   endgroup
+    %%   delay 1
+    %%   group
+    %%      node SUBSCRIBED_SCHEDULE_SYNC
+    %%      edge SUBSCRIBED_SCHEDULE_SYNC -> SUBSCRIBED_SYNC
+    %%   endgroup
+    %%   node SUBSCRIBED_SYNC
+    %%   group
+    %%   edge SUBSCRIBED_SUB -> SYNC_URL
+    %%   cluster SYNC_URL  
+    %%   endgroup

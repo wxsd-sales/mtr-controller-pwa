@@ -3,43 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/jsxapi@5.1.1/dist/jsxapi.js"></script>
     <script>
-      // Apply the Momentum Webex theme before first paint. On-device WebViews
-      // open this page with a "#theme=light|dark" hash; otherwise follow the OS.
-      (function initMomentumTheme() {
-        const getHashTheme = () => {
-          const raw = window.location.hash.startsWith("#")
-            ? window.location.hash.slice(1)
-            : window.location.hash;
-          if (!raw) return null;
-          const theme = new URLSearchParams(raw).get("theme");
-          return theme === "light" || theme === "dark" ? theme : null;
-        };
-
-        const apply = () => {
-          const forcedTheme = getHashTheme();
-          const dark = forcedTheme
-            ? forcedTheme === "dark"
-            : window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const root = document.documentElement;
-          root.classList.remove(
-            "mds-theme-stable-lightWebex",
-            "mds-theme-stable-darkWebex",
-          );
-          root.classList.add(
-            dark ? "mds-theme-stable-darkWebex" : "mds-theme-stable-lightWebex",
-          );
-          root.style.colorScheme = dark ? "dark" : "light";
-        };
-
-        apply();
-        window.addEventListener("hashchange", apply);
-        window
-          .matchMedia("(prefers-color-scheme: dark)")
-          .addEventListener("change", () => {
-            if (!getHashTheme()) apply();
-          });
-      })();
+      // Always use the Momentum Webex dark theme: the RoomOS WebEngine only
+      // ever reports a light color scheme, but dark suits the room devices.
+      document.documentElement.classList.add("mds-theme-stable-darkWebex");
+      document.documentElement.style.colorScheme = "dark";
     </script>
     <link
       rel="stylesheet"
@@ -62,42 +31,1826 @@
     <title>MTR Controller PWA</title>
     <!-- Generated from project.config.json by scripts/apply-config.mjs. -->
     <script src="app-config.js"></script>
-    <link rel="stylesheet" href="../wizard/styles.css" />
     <link rel="icon" href="../wizard/favicon.svg" type="image/svg+xml" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        background: var(--mds-color-theme-background-solid-primary-normal);
+        color: var(--mds-color-theme-text-primary-normal);
+      }
+      .view {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 24px;
+        text-align: center;
+      }
+      .view.active {
+        display: flex;
+      }
+      /* Standby: fully black so the screen reads as off. */
+      #view-standby {
+        background: #000;
+      }
+      /* Halfwake: black too, on RoomOS and MTR alike (no wallpaper). */
+      #view-halfwake {
+        background: #000;
+        color: #fff;
+      }
+      /*
+       * MTR theme: out-of-call views styled like a Microsoft Teams Rooms console.
+       * Sizes are in vw so the layout scales with the screen.
+       */
+      .mtr-only {
+        display: none;
+      }
+      body.mtr .mtr-only {
+        display: flex;
+      }
+      body.mtr .roomos-only-home {
+        display: none;
+      }
+      body.mtr .subtle {
+        color: #d9d3e6;
+      }
+      /* Wallpaper: an SVG behind the out-of-call views, only while they are showing. */
+      .mtr-wallpaper {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        width: 100%;
+        height: 100%;
+        display: none;
+      }
+      body.mtr-ooc .mtr-wallpaper {
+        display: block;
+      }
+      body.mtr-ooc {
+        background: #1c1230;
+      }
+      body.mtr #view-home {
+        background: transparent;
+        color: #fff;
+      }
+      body.mtr #view-home {
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 4.6vw 3.4vw;
+        text-align: left;
+      }
+      .mtr-date {
+        font-size: 1.25vw;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+      }
+      body.mtr #clock {
+        margin-top: 0.4vw;
+        font-size: 2.9vw;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .mtr-device {
+        align-items: center;
+        gap: 0.7vw;
+        margin-top: 0.5vw;
+        font-size: 1.25vw;
+      }
+      .mtr-device .icon {
+        font-size: 1.5vw;
+      }
+      /* Action icons: centred on the screen, or on the left beside the calendar. */
+      .mtr-actions {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        gap: 2vw;
+      }
+      /* With the calendar on the right, centre the icons in the left half. */
+      body.mtr-has-calendar .mtr-actions {
+        left: 25vw;
+      }
+      /* Calendar panel (only when the macro enables it) */
+      .mtr-calendar {
+        display: none;
+        position: absolute;
+        left: 50vw;
+        right: 7vw;
+        top: 6vw;
+        bottom: 6vw;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 1.2vw;
+        background: rgba(30, 24, 36, 0.78);
+        text-align: left;
+      }
+      body.mtr-has-calendar .mtr-calendar {
+        display: flex;
+      }
+      .cal-status {
+        display: flex;
+        gap: 1.4vw;
+        padding: 1.8vw 2vw;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .cal-bar {
+        width: 0.35vw;
+        min-height: 5vw;
+        border-radius: 0.2vw;
+        background: #2f9e44;
+      }
+      .cal-status.busy .cal-bar {
+        background: #d13a52;
+      }
+      .cal-state {
+        font-size: 2vw;
+        font-weight: 600;
+      }
+      .cal-sub {
+        margin-top: 0.4vw;
+        font-size: 1.35vw;
+        color: #d9d3e6;
+      }
+      .cal-list {
+        flex: 1;
+        overflow: hidden;
+        padding: 0.8vw 2vw;
+      }
+      .cal-day {
+        margin: 1.2vw 0 0.6vw;
+        font-size: 1.3vw;
+        color: #bdb4cf;
+      }
+      .cal-item {
+        display: flex;
+        gap: 1.4vw;
+        padding: 0.7vw 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .cal-item .cal-bar {
+        min-height: 3.2vw;
+        background: #5b5fc7;
+      }
+      .cal-title {
+        font-size: 1.5vw;
+        font-weight: 600;
+      }
+      .cal-meta {
+        margin-top: 0.2vw;
+        font-size: 1.2vw;
+        color: #d9d3e6;
+      }
+      .cal-empty {
+        padding-top: 1vw;
+        font-size: 1.3vw;
+        color: #bdb4cf;
+      }
+      .mtr-action {
+        width: 9vw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.9vw;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        font-size: 1.4vw;
+        cursor: pointer;
+      }
+      .mtr-action .circle {
+        width: 6vw;
+        height: 6vw;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(120, 52, 40, 0.55);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+      .mtr-action .icon {
+        font-size: 2.6vw;
+      }
+      .mtr-action:active .circle {
+        background: rgba(160, 76, 56, 0.75);
+      }
+      /* Sharing: the button turns Teams purple and offers to stop. */
+      .mtr-action.sharing .circle {
+        background: #5b5fc7;
+      }
+      .headline {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+      }
+      .subtle {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--mds-color-theme-text-secondary-normal);
+      }
+      .error-text {
+        color: var(--mds-color-theme-text-error-normal);
+      }
+      .big-icon {
+        font-size: 64px;
+      }
+      #clock {
+        font-size: 5rem;
+        font-weight: 300;
+        letter-spacing: -0.02em;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 4px solid var(--mds-color-theme-outline-secondary-normal);
+        border-top-color: var(--mds-color-theme-text-accent-normal);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* In-call controls, modelled on the RoomOS on-device call screen. */
+      #view-call {
+        justify-content: center;
+        gap: 48px;
+        padding: 0 32px;
+      }
+      .call-bar {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 32px;
+        border: 2px solid var(--mds-color-theme-outline-button-normal);
+        border-radius: 999px;
+        font-size: 1.25rem;
+        color: var(--mds-color-theme-text-secondary-normal);
+        white-space: nowrap;
+      }
+      .call-bar .icon {
+        font-size: 28px;
+      }
+      .call-bar .icon.muted {
+        color: var(--mds-color-theme-text-error-normal);
+      }
+      .call-clock {
+        position: fixed;
+        top: 36px;
+        right: 40px;
+        font-size: 1.75rem;
+        font-weight: 600;
+      }
+      .room-label {
+        position: fixed;
+        left: 40px;
+        bottom: 40px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .room-label .icon {
+        font-size: 28px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 48px;
+      }
+      /* Round button with its label underneath. */
+      .control {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: 168px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1.25;
+        color: var(--mds-color-theme-text-primary-normal);
+        cursor: pointer;
+      }
+      .control .circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 164px;
+        height: 164px;
+        border: 2px solid var(--mds-color-theme-outline-button-normal);
+        border-radius: 50%;
+      }
+      .control:active .circle {
+        background: var(--mds-color-theme-button-secondary-pressed);
+      }
+      .control .icon {
+        font-size: 56px;
+      }
+      .control.muted .circle {
+        background: var(--mds-color-theme-button-secondary-normal);
+      }
+      .control.muted .icon {
+        color: var(--mds-color-theme-text-error-normal);
+      }
+      .control.live .icon {
+        color: var(--mds-color-theme-text-success-normal);
+      }
+      .control.selected .circle {
+        background: var(--mds-color-theme-button-secondary-normal);
+      }
+      .control.end .circle {
+        border-color: transparent;
+        background: var(--mds-color-theme-button-cancel-normal);
+      }
+      .control.end .icon {
+        color: var(--mds-color-theme-common-text-primary-normal);
+      }
+      .control[hidden],
+      .camera-modes[hidden] {
+        display: none;
+      }
+      /* Pill buttons for secondary actions. */
+      .camera-modes {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+      }
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 88px;
+        padding: 0 36px;
+        border: 2px solid var(--mds-color-theme-outline-button-normal);
+        border-radius: 999px;
+        background: transparent;
+        font: inherit;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--mds-color-theme-text-primary-normal);
+        cursor: pointer;
+      }
+      .pill:active,
+      .pill.selected {
+        background: var(--mds-color-theme-button-secondary-normal);
+      }
+      .pill .icon {
+        font-size: 32px;
+      }
+
+      /* Volume: one outlined pill, down on the left and up on the right. */
+      .volume {
+        position: fixed;
+        right: 40px;
+        bottom: 32px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 88px;
+        padding: 0 12px;
+        border: 2px solid var(--mds-color-theme-outline-button-normal);
+        border-radius: 999px;
+      }
+      .volume[hidden] {
+        display: none;
+      }
+      .volume button {
+        width: 72px;
+        height: 72px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--mds-color-theme-text-primary-normal);
+        cursor: pointer;
+      }
+      .volume button:active {
+        background: var(--mds-color-theme-button-secondary-pressed);
+      }
+      .volume .icon {
+        font-size: 36px;
+      }
+      .volume-level {
+        min-width: 56px;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      /* MTR out-of-call volume: a square rocker on the right edge (+ on top, - below). */
+      body.mtr-ooc .volume {
+        right: 0.6vw;
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        flex-direction: column-reverse;
+        gap: 0;
+        width: 5.4vw;
+        height: auto;
+        padding: 0;
+        border: 0;
+        border-radius: 0.3vw;
+        background: rgba(20, 14, 30, 0.6);
+      }
+      body.mtr-ooc .volume button {
+        width: 100%;
+        height: 5.4vw;
+        border-radius: 0;
+        color: #fff;
+      }
+      body.mtr-ooc .volume button:active {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      body.mtr-ooc .volume button .icon {
+        display: none;
+      }
+      body.mtr-ooc #vol-up::before {
+        content: "+";
+        font-size: 3vw;
+        font-weight: 300;
+      }
+      body.mtr-ooc #vol-down::before {
+        content: "\2212";
+        font-size: 3vw;
+        font-weight: 300;
+      }
+      /* The level is a speaker icon until the volume changes, then the number for a moment. */
+      .vol-speaker {
+        display: none;
+      }
+      body.mtr-ooc .vol-speaker {
+        display: block;
+        padding: 0.5vw 0;
+        font-size: 2.2vw;
+        color: #d9d3e6;
+      }
+      body.mtr-ooc .volume-level {
+        display: none;
+        min-width: 0;
+        padding: 0.4vw 0;
+        font-size: 1.4vw;
+        font-weight: 400;
+        color: #d9d3e6;
+      }
+      body.mtr-ooc .volume.showing-level .volume-level {
+        display: block;
+      }
+      body.mtr-ooc .volume.showing-level .vol-speaker {
+        display: none;
+      }
+      /* MTR in-call view: Teams Rooms console look (vw units scale with the screen) */
+      #view-mtr-call {
+        background: linear-gradient(180deg, #2e2c3b 0%, #303056 55%, #2f2f4d);
+        color: #fff;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 2vw 2.2vw;
+        text-align: left;
+      }
+      .mtrc-time {
+        font-size: 2.3vw;
+        font-weight: 700;
+      }
+      .mtrc-device {
+        display: flex;
+        align-items: center;
+        gap: 0.7vw;
+        margin-top: 0.4vw;
+        font-size: 1.3vw;
+        color: #c9c6d6;
+      }
+      .mtrc-device .icon {
+        font-size: 1.5vw;
+      }
+      .mtrc-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 7vw;
+        padding: 0 1.2vw;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1.2vw;
+        background: #282828;
+      }
+      .mtrc-group {
+        display: flex;
+        align-items: center;
+        height: 4.7vw;
+        border-radius: 0.7vw;
+        background: #3a3a3a;
+      }
+      .mtrc-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-width: 4.6vw;
+        border: 0;
+        border-radius: 0.7vw;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      .mtrc-btn:active {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .mtrc-btn .icon {
+        font-size: 2.2vw;
+      }
+      .mtrc-btn.muted .icon {
+        color: #ff7b8a;
+      }
+      .mtrc-divider {
+        width: 1px;
+        height: 2.4vw;
+        background: #6a6a6a;
+      }
+      /* The speaker icon shows the level briefly when the volume changes. */
+      .mtrc-level {
+        display: none;
+        font-size: 1.9vw;
+        font-weight: 600;
+      }
+      .mtrc-vol-center.showing-level .icon {
+        display: none;
+      }
+      .mtrc-vol-center.showing-level .mtrc-level {
+        display: inline;
+      }
+      .mtrc-vol-center {
+        pointer-events: none;
+      }
+
+      /* Room Camera modal */
+      .cam-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        background: rgba(0, 0, 0, 0.6);
+      }
+      .cam-overlay.open {
+        display: block;
+      }
+      .cam-dialog {
+        position: absolute;
+        left: 7.5%;
+        right: 7.5%;
+        top: 11%;
+        bottom: 11%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 0.8vw;
+        background: #000;
+        color: #fff;
+        text-align: left;
+      }
+      .cam-head {
+        display: flex;
+        align-items: center;
+        gap: 2vw;
+        height: 5.2vw;
+        padding: 0 1.6vw;
+        background: #181818;
+        font-size: 2.1vw;
+        font-weight: 600;
+      }
+      .cam-back {
+        border: 0;
+        background: transparent;
+        color: #fff;
+        width: 4vw;
+        height: 4vw;
+        cursor: pointer;
+      }
+      .cam-back .icon {
+        font-size: 2.2vw;
+      }
+      .cam-body {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 43% 1fr;
+        gap: 1.2vw;
+        padding: 1vw 1.8vw;
+      }
+      .cam-label {
+        font-size: 2vw;
+        font-weight: 600;
+      }
+      .cam-source {
+        width: 100%;
+        margin-top: 1.4vw;
+        padding: 1.2vw 1vw;
+        border: 0;
+        border-bottom: 2px solid #8a8a8a;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        font-size: 2.2vw;
+      }
+      .cam-source option {
+        background: #181818;
+      }
+      .cam-right {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .cam-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.8vw 1.2vw 1.2vw 0.8vw;
+        font-size: 1.8vw;
+      }
+      .cam-switch {
+        position: relative;
+        width: 4.2vw;
+        height: 2.2vw;
+        border: 0;
+        border-radius: 1.1vw;
+        background: #555;
+        cursor: pointer;
+      }
+      .cam-switch::after {
+        content: "";
+        position: absolute;
+        top: 0.2vw;
+        left: 0.2vw;
+        width: 1.8vw;
+        height: 1.8vw;
+        border-radius: 50%;
+        background: #bbb;
+        transition: transform 0.15s;
+      }
+      .cam-switch[aria-checked="true"] {
+        background: #4b4f9c;
+      }
+      .cam-switch[aria-checked="true"]::after {
+        background: #7b83eb;
+        transform: translateX(2vw);
+      }
+      .cam-panel {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        background: #1a1a1a;
+      }
+      .cam-panel[hidden] {
+        display: none;
+      }
+      #cam-manual {
+        flex: none;
+        height: 17.6vw;
+      }
+      .cam-option {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 1.4vw;
+        padding: 1.2vw 1.6vw;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .cam-option.selected {
+        background: #2e2e2e;
+      }
+      .cam-option-label {
+        width: 11vw;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5vw;
+        font-size: 1.9vw;
+        text-align: center;
+      }
+      .cam-option-label .icon {
+        font-size: 2.2vw;
+      }
+      .cam-option-desc {
+        font-size: 1.45vw;
+        line-height: 1.3;
+      }
+      .cam-manual {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        align-items: center;
+        justify-items: center;
+        height: 100%;
+        padding: 1vw;
+      }
+      .cam-zoom,
+      .cam-reset {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.2vw;
+        font-size: 1.6vw;
+      }
+      .cam-pad {
+        display: grid;
+        grid-template-columns: repeat(3, 5vw);
+        grid-template-rows: repeat(3, 4.6vw);
+        justify-items: center;
+        align-items: center;
+      }
+      .cam-ctl {
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4vw;
+        padding: 0.6vw 1vw;
+        cursor: pointer;
+        touch-action: none;
+      }
+      .cam-ctl:active {
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 0.5vw;
+      }
+      .cam-ctl .icon {
+        font-size: 2.4vw;
+      }
+      .toast {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 20px;
+        border-radius: 12px;
+        background: var(--mds-color-theme-button-cancel-normal);
+        color: var(--mds-color-theme-common-text-primary-normal);
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+    </style>
   </head>
   <body>
-    <header class="app-header">
-      <div class="app-header__brand">
-        <span class="app-header__product" id="app-product">Web App</span>
-      </div>
-    </header>
+    <section class="view" id="view-bad-hash">
+      <i class="icon icon-error-legacy-filled big-icon error-text"></i>
+      <h1 class="headline error-text">Bad hash parameters</h1>
+      <p class="subtle" id="bad-hash-detail"></p>
+    </section>
 
-    <main class="app-main">
-      <div class="app-content">
-        <div class="page-stack">
-          <section class="webapp-function">
-            <h2>Advanced Features</h2>
-            <p>
-              This page is opened by the macro in an on-device WebView to
-              provide advanced features beyond the native UI extensions. Replace
-              this placeholder with your app.
-            </p>
-            <p class="field__hint">
-              Loaded from <code id="base-url">GitHub Pages</code>
-            </p>
-          </section>
+    <section class="view" id="view-connecting">
+      <div class="spinner"></div>
+      <h1 class="headline" id="connecting-text">Connecting...</h1>
+      <p class="subtle error-text" id="connecting-error"></p>
+    </section>
+
+    <section class="view" id="view-standby"></section>
+
+    <section class="view" id="view-halfwake">
+      <h1 class="headline">Tap this screen to get started</h1>
+    </section>
+
+    <svg
+      class="mtr-wallpaper"
+      viewBox="0 0 1920 1200"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="wp-base" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#0e2b35" />
+          <stop offset="0.35" stop-color="#271c4c" />
+          <stop offset="0.7" stop-color="#521d45" />
+          <stop offset="1" stop-color="#6a2236" />
+        </linearGradient>
+        <radialGradient id="wp-glow" cx="0.08" cy="0.95" r="0.75">
+          <stop offset="0" stop-color="#ff861c" stop-opacity="0.8" />
+          <stop offset="0.5" stop-color="#c2412c" stop-opacity="0.25" />
+          <stop offset="1" stop-color="#c2412c" stop-opacity="0" />
+        </radialGradient>
+        <linearGradient id="wp-wave" x1="0" y1="0.2" x2="1" y2="0.5">
+          <stop offset="0" stop-color="#ffa22e" />
+          <stop offset="0.45" stop-color="#ee5f1d" />
+          <stop offset="1" stop-color="#a02e3a" />
+        </linearGradient>
+        <linearGradient id="wp-shade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2a1236" stop-opacity="0" />
+          <stop offset="1" stop-color="#1b0c26" stop-opacity="0.5" />
+        </linearGradient>
+        <filter id="wp-soft" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+        <filter id="wp-haze" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="40" />
+        </filter>
+      </defs>
+      <rect width="1920" height="1200" fill="url(#wp-base)" />
+      <rect width="1920" height="1200" fill="url(#wp-glow)" />
+      <!-- soft teal haze, top left -->
+      <ellipse
+        cx="250"
+        cy="120"
+        rx="520"
+        ry="260"
+        fill="#1b5a64"
+        opacity="0.35"
+        filter="url(#wp-haze)"
+      />
+      <!-- the sweeping ribbon -->
+      <path
+        d="M-120 640 C 280 480, 640 720, 1000 880 S 1700 1000, 2040 740 L 2040 1300 L -120 1300 Z"
+        fill="url(#wp-wave)"
+        opacity="1"
+        filter="url(#wp-soft)"
+      />
+      <path
+        d="M-120 640 C 300 510, 660 700, 1020 840 S 1700 950, 2040 700"
+        fill="none"
+        stroke="#ffc27a"
+        stroke-opacity="0.4"
+        stroke-width="5"
+        filter="url(#wp-soft)"
+      />
+      <!-- a darker fold across the lower part of the ribbon -->
+      <path
+        d="M-120 930 C 360 820, 820 940, 1240 1060 S 1800 1130, 2040 1010 L 2040 1300 L -120 1300 Z"
+        fill="#2d1238"
+        opacity="0.4"
+        filter="url(#wp-soft)"
+      />
+      <rect width="1920" height="1200" fill="url(#wp-shade)" />
+    </svg>
+
+    <section class="view" id="view-home">
+      <div class="mtr-date mtr-only" id="date"></div>
+      <div id="clock"></div>
+      <h1 class="headline roomos-only-home" id="room-name"></h1>
+      <div class="mtr-device mtr-only">
+        <i class="icon icon-device-connection-regular"></i
+        ><span id="mtr-device-name"></span>
+      </div>
+      <div class="mtr-actions mtr-only">
+        <button class="mtr-action" id="btn-share" type="button">
+          <span class="circle"
+            ><i class="icon icon-share-screen-regular"></i></span
+          ><span id="btn-share-label">Share</span>
+        </button>
+      </div>
+      <aside class="mtr-calendar" id="mtr-calendar" aria-label="Room calendar">
+        <div class="cal-status" id="cal-status">
+          <div class="cal-bar"></div>
+          <div>
+            <div class="cal-state" id="cal-state"></div>
+            <div class="cal-sub" id="cal-sub"></div>
+          </div>
+        </div>
+        <div class="cal-list" id="cal-list"></div>
+      </aside>
+    </section>
+
+    <section class="view" id="view-call">
+      <div class="call-bar">
+        <span id="call-title"></span>
+        <i
+          class="icon icon-microphone-muted-filled muted"
+          id="bar-mic"
+          hidden
+        ></i>
+        <i
+          class="icon icon-camera-muted-filled muted"
+          id="bar-video"
+          hidden
+        ></i>
+      </div>
+      <div class="call-clock" id="call-clock"></div>
+      <div class="controls">
+        <button class="control" id="btn-mic" type="button">
+          <span class="circle"><i class="icon icon-microphone-filled"></i></span
+          ><span id="btn-mic-label">Mute</span>
+        </button>
+        <button class="control live" id="btn-video" type="button">
+          <span class="circle"><i class="icon icon-camera-on-filled"></i></span
+          ><span id="btn-video-label">Stop Video</span>
+        </button>
+        <button class="control roomos-only" id="btn-selfview" type="button">
+          <span class="circle"><i class="icon icon-pip-bold"></i></span
+          ><span>Self view</span>
+        </button>
+        <button class="control end roomos-only" id="btn-end" type="button">
+          <span class="circle"><i class="icon icon-cancel-bold"></i></span
+          ><span>Leave call</span>
+        </button>
+      </div>
+      <div class="camera-modes roomos-only" id="camera-modes">
+        <button class="pill" data-camera-mode="manual" type="button">
+          <i class="icon icon-camera-aux-bold"></i><span>Manual</span>
+        </button>
+        <button class="pill" data-camera-mode="speaker" type="button">
+          <i class="icon icon-active-speaker-bold"></i
+          ><span>Speaker track</span>
+        </button>
+        <button class="pill" data-camera-mode="presenter" type="button">
+          <i class="icon icon-presentation-bold"></i
+          ><span>Presenter track</span>
+        </button>
+      </div>
+      <div class="room-label">
+        <i class="icon icon-location-bold"></i><span id="call-room-name"></span>
+      </div>
+    </section>
+
+    <section class="view" id="view-mtr-call">
+      <div class="mtrc-time" id="mtrc-time"></div>
+      <div class="mtrc-device">
+        <i class="icon icon-device-connection-regular"></i
+        ><span id="mtrc-device-name"></span>
+      </div>
+      <div class="mtrc-bar">
+        <div class="mtrc-group">
+          <button
+            class="mtrc-btn"
+            id="mtrc-vol-down"
+            type="button"
+            aria-label="Volume down"
+          >
+            <i class="icon icon-minus-regular"></i>
+          </button>
+          <div class="mtrc-btn mtrc-vol-center" id="mtrc-vol-center">
+            <i class="icon icon-speaker-regular"></i
+            ><span class="mtrc-level" id="mtrc-level"></span>
+          </div>
+          <button
+            class="mtrc-btn"
+            id="mtrc-vol-up"
+            type="button"
+            aria-label="Volume up"
+          >
+            <i class="icon icon-plus-regular"></i>
+          </button>
+        </div>
+        <div class="mtrc-group">
+          <button
+            class="mtrc-btn"
+            id="mtrc-video"
+            type="button"
+            aria-label="Camera"
+          >
+            <i class="icon icon-camera-on-filled"></i>
+          </button>
+          <div class="mtrc-divider"></div>
+          <button
+            class="mtrc-btn"
+            id="mtrc-cam-more"
+            type="button"
+            aria-label="Camera settings"
+          >
+            <i class="icon icon-arrow-down-regular"></i>
+          </button>
+        </div>
+        <div class="mtrc-group">
+          <button
+            class="mtrc-btn"
+            id="mtrc-mic"
+            type="button"
+            aria-label="Microphone"
+          >
+            <i class="icon icon-microphone-filled"></i>
+          </button>
         </div>
       </div>
-    </main>
+    </section>
+
+    <div class="cam-overlay" id="cam-overlay">
+      <div class="cam-dialog" role="dialog" aria-label="Room Camera">
+        <div class="cam-head">
+          <button
+            class="cam-back"
+            id="cam-back"
+            type="button"
+            aria-label="Close"
+          >
+            <i class="icon icon-arrow-left-regular"></i></button
+          ><span>Room Camera</span>
+        </div>
+        <div class="cam-body">
+          <div>
+            <div class="cam-label">Source</div>
+            <select class="cam-source" aria-label="Source">
+              <option>Selfview</option>
+            </select>
+          </div>
+          <div class="cam-right">
+            <div class="cam-toggle-row">
+              <span id="cam-toggle-label">Enhanced framing</span>
+              <button
+                class="cam-switch"
+                id="cam-toggle"
+                type="button"
+                role="switch"
+                aria-checked="false"
+                aria-labelledby="cam-toggle-label"
+              ></button>
+            </div>
+            <div class="cam-panel" id="cam-auto" hidden>
+              <button
+                class="cam-option"
+                data-framing="intelliframe"
+                type="button"
+              >
+                <span class="cam-option-label"
+                  ><i class="icon icon-camera-presence-regular"></i
+                  >IntelliFrame</span
+                ><span class="cam-option-desc"
+                  >Enhances focus and framing of in-room attendees</span
+                >
+              </button>
+              <button class="cam-option" data-framing="room" type="button">
+                <span class="cam-option-label"
+                  ><i class="icon icon-people-regular"></i>Room</span
+                ><span class="cam-option-desc"
+                  >Automatically center and focus on everyone in the room.</span
+                >
+              </button>
+              <button class="cam-option" data-framing="speaker" type="button">
+                <span class="cam-option-label"
+                  ><i class="icon icon-active-speaker-regular"></i>Active
+                  speaker</span
+                ><span class="cam-option-desc"
+                  >Automatically center and focus on person talking.</span
+                >
+              </button>
+              <button class="cam-option" data-framing="composite" type="button">
+                <span class="cam-option-label"
+                  ><i class="icon icon-video-layout-equal-regular"></i
+                  >Composite</span
+                ><span class="cam-option-desc"
+                  >Zoom in on each person in the room, then combine them into a
+                  single view.</span
+                >
+              </button>
+            </div>
+            <div class="cam-panel" id="cam-manual">
+              <div class="cam-manual">
+                <div class="cam-zoom">
+                  <button
+                    class="cam-ctl"
+                    data-ramp="Zoom:In"
+                    type="button"
+                    aria-label="Zoom in"
+                  >
+                    <i class="icon icon-zoom-in-regular"></i></button
+                  ><span>Zoom</span
+                  ><button
+                    class="cam-ctl"
+                    data-ramp="Zoom:Out"
+                    type="button"
+                    aria-label="Zoom out"
+                  >
+                    <i class="icon icon-zoom-out-regular"></i>
+                  </button>
+                </div>
+                <div class="cam-pad">
+                  <span></span
+                  ><button
+                    class="cam-ctl"
+                    data-ramp="Tilt:Up"
+                    type="button"
+                    aria-label="Tilt up"
+                  >
+                    <i class="icon icon-arrow-up-regular"></i></button
+                  ><span></span
+                  ><button
+                    class="cam-ctl"
+                    data-ramp="Pan:Left"
+                    type="button"
+                    aria-label="Pan left"
+                  >
+                    <i class="icon icon-arrow-left-regular"></i></button
+                  ><span></span
+                  ><button
+                    class="cam-ctl"
+                    data-ramp="Pan:Right"
+                    type="button"
+                    aria-label="Pan right"
+                  >
+                    <i class="icon icon-arrow-right-regular"></i></button
+                  ><span></span
+                  ><button
+                    class="cam-ctl"
+                    data-ramp="Tilt:Down"
+                    type="button"
+                    aria-label="Tilt down"
+                  >
+                    <i class="icon icon-arrow-down-regular"></i></button
+                  ><span></span>
+                </div>
+                <div class="cam-reset">
+                  <button class="cam-ctl" id="cam-reset" type="button">
+                    <i class="icon icon-reset-regular"></i>Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="volume" id="volume" hidden>
+      <button id="vol-down" type="button" aria-label="Volume down">
+        <i class="icon icon-speaker-turn-down-filled"></i>
+      </button>
+      <span class="volume-level" id="vol-level"></span>
+      <i class="icon icon-speaker-regular vol-speaker"></i>
+      <button id="vol-up" type="button" aria-label="Volume up">
+        <i class="icon icon-speaker-turn-up-filled"></i>
+      </button>
+    </div>
+    <div class="toast" id="toast"></div>
 
     <script type="module">
+      import {
+        normalizeMode,
+        normalizeFlag,
+        useMtrTheme,
+        useMtrCallUi,
+      } from "./view-mode.js";
+      import {
+        parseBookings,
+        currentBooking,
+        nextBooking,
+        groupByDay,
+      } from "./calendar.js";
+      import { behaviorForFraming, framingForBehavior } from "./framing.js";
+      import {
+        DEMO_NOW,
+        DEMO_ADDRESS,
+        DEMO_DEVICE_NAME,
+        demoScene,
+        demoBookings,
+      } from "./demo.js";
+
       const config = window.APP_CONFIG ?? {};
-      if (config.title) {
-        document.getElementById("app-product").textContent = config.title;
-        document.title = config.title;
+      if (config.title) document.title = config.title;
+
+      const VOLUME_STEP = 5;
+      const RETRY_MS = 5000;
+      const $ = (id) => document.getElementById(id);
+
+      // ---- Hash parameters -------------------------------------------------
+      // Hash is base64(JSON({ username, password, address, mtrDevice, mode })).
+      // mtrDevice (boolean) and mode ("Auto" | "RoomOS Only" | "MTR Only") are
+      // optional and only change the theming; see view-mode.js. calendar (boolean)
+      // turns the room calendar on. demo (a scene name from demo.js) shows canned
+      // content with no device, for documentation screenshots.
+      function parseHash() {
+        const raw = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+        if (!raw) throw new Error("No parameters found in the URL hash.");
+        let params;
+        try {
+          const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+          const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+          params = JSON.parse(new TextDecoder().decode(bytes));
+        } catch {
+          throw new Error("The URL hash is not valid base64 encoded JSON.");
+        }
+        // A demo scene (see demo.js) needs no account or device
+        if (!params?.demo) {
+          for (const key of ["username", "password", "address"]) {
+            if (typeof params?.[key] !== "string" || !params[key]) {
+              throw new Error(`Missing "${key}" parameter.`);
+            }
+          }
+        }
+        params.mtrDevice = normalizeFlag(params.mtrDevice);
+        params.calendar = normalizeFlag(params.calendar);
+        params.mode = normalizeMode(params.mode);
+        return params;
       }
-      if (config.webappUrl) {
-        document.getElementById("base-url").textContent = config.webappUrl;
+
+      // Set from the hash before connecting; the macro rewrites the URL (and so
+      // reloads this page) whenever the mode or the device's MTR status changes.
+      let viewOptions = { mode: "Auto", mtrDevice: false, calendar: false };
+
+      // Demo scenes (demo.js) freeze the clock and never talk to a device.
+      let demoNow = null;
+      const nowDate = () => demoNow ?? new Date();
+      // Demo scenes use a fixed locale so dates and times read the same everywhere.
+      const locale = () => (demoNow ? "en-US" : []);
+
+      // ---- Views -----------------------------------------------------------
+      const state = {
+        connected: false,
+        standby: "Off",
+        mtrCall: false,
+        activeCalls: 0,
+        micMuted: false,
+        videoMuted: false,
+        selfview: false,
+        volume: 0,
+        cameraMode: "manual",
+        sharing: false,
+        bookings: [],
+        volumeKnown: false,
+        speakerBehavior: "",
+      };
+
+      function show(id) {
+        console.log("Showing View:", id);
+        for (const view of document.querySelectorAll(".view")) {
+          view.classList.toggle("active", view.id === id);
+        }
+        $("volume").hidden = id !== "view-call" && id !== "view-home";
+      }
+
+      function render() {
+        const mtrTheme = useMtrTheme(viewOptions);
+        document.body.classList.toggle("mtr", mtrTheme);
+        document.body.classList.toggle(
+          "mtr-has-calendar",
+          mtrTheme && viewOptions.calendar,
+        );
+        if (!state.connected) {
+          document.body.classList.remove("mtr-ooc");
+          return show("view-connecting");
+        }
+        const inCall = state.mtrCall || state.activeCalls >= 1;
+        // Wallpaper and the square volume rocker only apply to the MTR home view
+        // (not in a call, and not standby or halfwake, which are plain black)
+        document.body.classList.toggle(
+          "mtr-ooc",
+          mtrTheme &&
+            !inCall &&
+            state.standby !== "Standby" &&
+            state.standby !== "Halfwake",
+        );
+        $("btn-share").classList.toggle("sharing", state.sharing);
+        $("btn-share-label").textContent = state.sharing
+          ? "Stop sharing"
+          : "Share";
+        if (!inCall) closeCameraModal();
+        const mtrUi =
+          inCall &&
+          useMtrCallUi({ mode: viewOptions.mode, mtrCall: state.mtrCall });
+        if (mtrUi) {
+          show("view-mtr-call");
+          renderMtrCall();
+        } else if (inCall) {
+          show("view-call");
+          $("call-title").textContent = state.mtrCall
+            ? "Microsoft Teams call"
+            : "Call in progress";
+          for (const el of document.querySelectorAll(".roomos-only")) {
+            el.hidden = false;
+          }
+          $("btn-mic").classList.toggle("muted", state.micMuted);
+          $("bar-mic").hidden = !state.micMuted;
+          $("bar-video").hidden = !state.videoMuted;
+          $("btn-mic").querySelector(".icon").className =
+            `icon icon-microphone-${state.micMuted ? "muted-" : ""}filled`;
+          $("btn-mic-label").textContent = state.micMuted ? "Unmute" : "Mute";
+          $("btn-video").classList.toggle("muted", state.videoMuted);
+          $("btn-video").classList.toggle("live", !state.videoMuted);
+          $("btn-video").querySelector(".icon").className =
+            `icon icon-camera-${state.videoMuted ? "muted" : "on"}-filled`;
+          $("btn-video-label").textContent = state.videoMuted
+            ? "Start Video"
+            : "Stop Video";
+          $("btn-selfview").classList.toggle("selected", state.selfview);
+          for (const btn of document.querySelectorAll("[data-camera-mode]")) {
+            btn.classList.toggle(
+              "selected",
+              btn.dataset.cameraMode === state.cameraMode,
+            );
+          }
+        } else if (state.standby === "Standby") {
+          show("view-standby");
+        } else if (state.standby === "Halfwake") {
+          show("view-halfwake");
+        } else {
+          show("view-home");
+        }
+        $("vol-level").textContent = Math.round(state.volume);
+      }
+
+      // ---- Calendar (MTR home screen, when the macro turns it on) ----------
+      const timeText = (date) =>
+        date.toLocaleTimeString(locale(), {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      const dayLabel = ({ key, date }) =>
+        key === "today"
+          ? "Today"
+          : key === "tomorrow"
+            ? "Tomorrow"
+            : date.toLocaleDateString(locale(), {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              });
+
+      function el(tag, className, text) {
+        const node = document.createElement(tag);
+        node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function renderCalendar() {
+        if (!viewOptions.calendar) return;
+        const now = nowDate();
+        // Meetings that finished since the last query drop off without a refetch
+        const bookings = state.bookings.filter((b) => b.end > now);
+        const current = currentBooking(bookings, now);
+        const next = nextBooking(bookings, now);
+
+        $("cal-status").classList.toggle("busy", Boolean(current));
+        $("cal-state").textContent = current ? current.title : "Available";
+        $("cal-sub").textContent = current
+          ? `${timeText(current.start)} - ${timeText(current.end)}`
+          : next && next.start.toDateString() === now.toDateString()
+            ? `Until ${timeText(next.start)}`
+            : "All day";
+
+        const list = $("cal-list");
+        list.replaceChildren();
+        // The current meeting is already the headline, so list the rest
+        const rest = bookings.filter((b) => b !== current);
+        if (!rest.length) {
+          list.append(el("div", "cal-empty", "No more meetings"));
+          return;
+        }
+        for (const group of groupByDay(rest, now)) {
+          list.append(el("div", "cal-day", dayLabel(group)));
+          for (const b of group.items) {
+            const item = el("div", "cal-item");
+            const text = el("div", "");
+            text.append(el("div", "cal-title", b.title));
+            text.append(
+              el(
+                "div",
+                "cal-meta",
+                [
+                  b.allDay
+                    ? "All day"
+                    : `${timeText(b.start)} - ${timeText(b.end)}`,
+                  b.organizer,
+                ]
+                  .filter(Boolean)
+                  .join(" \u00b7 "),
+              ),
+            );
+            item.append(el("div", "cal-bar"), text);
+            list.append(item);
+          }
+        }
+      }
+
+      function loadBookings() {
+        if (!viewOptions.calendar || !xapi) return;
+        xapi.Command.Bookings.List()
+          .then((result) => {
+            state.bookings = parseBookings(result);
+          })
+          .catch(() => {
+            state.bookings = [];
+          })
+          .then(renderCalendar);
+      }
+
+      function toast(message) {
+        const el = $("toast");
+        el.textContent = message;
+        el.classList.add("show");
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => el.classList.remove("show"), 3000);
+      }
+
+      function tickClock() {
+        const time = nowDate().toLocaleTimeString(locale(), {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        $("clock").textContent = time;
+        $("mtrc-time").textContent = time;
+        renderCalendar();
+        $("date").textContent = nowDate().toLocaleDateString(locale(), {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
+        $("call-clock").textContent = time;
+      }
+      tickClock();
+      setInterval(tickClock, 10000);
+
+      // ---- xAPI ------------------------------------------------------------
+      let xapi = null;
+
+      // Reads a status once, then subscribes; failures (e.g. a status the
+      // device does not have) leave the default in place.
+      function watch(path, apply) {
+        const handle = (value) => {
+          apply(value);
+          render();
+        };
+        path
+          .get()
+          .then(handle)
+          .catch(() => {});
+        path.on(handle);
+      }
+
+      function subscribeAll() {
+        const s = xapi.Status;
+        watch(s.Standby.State, (v) => (state.standby = v));
+        watch(
+          s.MicrosoftTeams.Calling.InCall,
+          (v) => (state.mtrCall = String(v) === "True"),
+        );
+        watch(
+          s.SystemUnit.State.NumberOfActiveCalls,
+          (v) => (state.activeCalls = Number(v) || 0),
+        );
+        watch(s.Audio.Microphones.Mute, (v) => (state.micMuted = v === "On"));
+        watch(
+          s.Video.Input.MainVideoMute,
+          (v) => (state.videoMuted = v === "On"),
+        );
+        watch(s.Video.Selfview.Mode, (v) => (state.selfview = v === "On"));
+        watch(s.Audio.Volume, (v) => {
+          const level = Number(v) || 0;
+          const changed = state.volumeKnown && level !== state.volume;
+          state.volume = level;
+          state.volumeKnown = true;
+          if (changed) flashVolume();
+        });
+        watch(s.UserInterface.ContactInfo.Name, (v) => {
+          $("room-name").textContent = v || "";
+          $("mtr-device-name").textContent = v || "";
+          $("mtrc-device-name").textContent = v || "";
+          $("call-room-name").textContent = v || "";
+        });
+        // Sharing from this device (out of a call this is a local-only presentation).
+        // Change events only carry the changed fields, so re-read the whole status.
+        const updateSharing = () =>
+          s.Conference.Presentation.get()
+            .then((presentation) => {
+              const local = [presentation?.LocalInstance ?? []].flat();
+              state.sharing = local.some((i) => i && i.ghost !== "True");
+              render();
+            })
+            .catch(() => {});
+        updateSharing();
+        s.Conference.Presentation.on(updateSharing);
+        // Bookings: query on load, when the current booking changes, and every
+        // minute so new or cancelled meetings show up.
+        if (viewOptions.calendar && useMtrTheme(viewOptions)) {
+          loadBookings();
+          s.Bookings.Current.Id.on(loadBookings);
+          clearInterval(subscribeAll.bookingsTimer);
+          subscribeAll.bookingsTimer = setInterval(loadBookings, 60000);
+        }
+        const updateCameraMode = () => {
+          Promise.all([
+            s.Cameras.SpeakerTrack.Status.get().catch(() => "Off"),
+            s.Cameras.PresenterTrack.Status.get().catch(() => "Off"),
+          ]).then(([speaker, presenter]) => {
+            state.cameraMode =
+              speaker === "Active"
+                ? "speaker"
+                : presenter === "Follow" || presenter === "Persistent"
+                  ? "presenter"
+                  : "manual";
+            render();
+          });
+        };
+        updateCameraMode();
+        s.Cameras.SpeakerTrack.Status.on(updateCameraMode);
+        // The active SpeakerTrack behaviour (BestOverview, Dynamic, Closeup, Frames)
+        watch(
+          s.Cameras.SpeakerTrack.Behavior.Active,
+          (v) => (state.speakerBehavior = String(v ?? "")),
+        );
+        s.Cameras.PresenterTrack.Status.on(updateCameraMode);
+      }
+
+      function connect(params) {
+        $("connecting-text").textContent = `Connecting to ${params.address}`;
+        state.connected = false;
+        render();
+
+        let retried = false;
+        const retry = (message) => {
+          if (retried) return;
+          retried = true;
+          state.connected = false;
+          $("connecting-error").textContent = message ?? "";
+          render();
+          setTimeout(() => connect(params), RETRY_MS);
+        };
+
+        // IPv6 literals need brackets in a URL.
+        const host = params.address.includes(":")
+          ? `[${params.address}]`
+          : params.address;
+        let conn;
+        try {
+          conn = jsxapi.connect(`wss://${host}`, {
+            username: params.username,
+            password: params.password,
+          });
+        } catch (error) {
+          return retry(String(error?.message ?? error));
+        }
+        conn.on("error", (error) =>
+          retry(String(error?.message ?? error ?? "Connection error")),
+        );
+        conn.on("close", () => retry("Connection closed"));
+        conn.on("ready", (x) => {
+          xapi = x;
+          state.connected = true;
+          $("connecting-error").textContent = "";
+          subscribeAll();
+          render();
+        });
+      }
+
+      // ---- Controls --------------------------------------------------------
+      async function run(action) {
+        if (demoNow) return; // demo scenes have no device to command
+        try {
+          await action();
+        } catch (error) {
+          toast(error?.message ?? "Command failed");
+        }
+      }
+
+      $("btn-mic").onclick = () =>
+        run(() =>
+          state.micMuted
+            ? xapi.Command.Audio.Microphones.Unmute()
+            : xapi.Command.Audio.Microphones.Mute(),
+        );
+      $("btn-video").onclick = () =>
+        run(() =>
+          state.videoMuted
+            ? xapi.Command.Video.Input.MainVideo.Unmute()
+            : xapi.Command.Video.Input.MainVideo.Mute(),
+        );
+      $("btn-selfview").onclick = () =>
+        run(() =>
+          xapi.Command.Video.Selfview.Set({
+            Mode: state.selfview ? "Off" : "On",
+          }),
+        );
+      $("btn-end").onclick = () => run(() => xapi.Command.Call.Disconnect());
+
+      $("btn-share").onclick = () =>
+        run(() =>
+          state.sharing
+            ? xapi.Command.Presentation.Stop()
+            : xapi.Command.Presentation.Start(),
+        );
+
+      // ---- MTR in-call view ------------------------------------------------
+      function renderMtrCall() {
+        $("mtrc-mic").classList.toggle("muted", state.micMuted);
+        $("mtrc-mic").querySelector(".icon").className =
+          `icon icon-microphone-${state.micMuted ? "muted-" : ""}filled`;
+        $("mtrc-video").classList.toggle("muted", state.videoMuted);
+        $("mtrc-video").querySelector(".icon").className =
+          `icon icon-camera-${state.videoMuted ? "muted" : "on"}-filled`;
+        renderCameraModal();
+      }
+
+      // The speaker icon (in-call bar and MTR home rocker) shows the current level
+      // for a moment after any volume change, here or on another interface.
+      function flashVolume() {
+        $("mtrc-level").textContent = Math.round(state.volume);
+        $("vol-level").textContent = Math.round(state.volume);
+        const shown = [$("mtrc-vol-center"), $("volume")];
+        for (const el of shown) el.classList.add("showing-level");
+        clearTimeout(flashVolume.timer);
+        flashVolume.timer = setTimeout(() => {
+          for (const el of shown) el.classList.remove("showing-level");
+        }, 2000);
+      }
+
+      // Room Camera modal. Enhanced framing is the automatic mode (SpeakerTrack);
+      // off is manual pan / tilt / zoom.
+      function renderCameraModal() {
+        const auto = state.cameraMode === "speaker";
+        $("cam-toggle").setAttribute("aria-checked", String(auto));
+        $("cam-auto").hidden = !auto;
+        $("cam-manual").hidden = auto;
+        // The highlighted option comes from the device's SpeakerTrack behaviour
+        const framing = auto ? framingForBehavior(state.speakerBehavior) : null;
+        for (const row of document.querySelectorAll("[data-framing]")) {
+          row.classList.toggle("selected", row.dataset.framing === framing);
+        }
+      }
+      const openCameraModal = () => {
+        $("cam-overlay").classList.add("open");
+        renderCameraModal();
+      };
+      function closeCameraModal() {
+        $("cam-overlay").classList.remove("open");
+      }
+
+      const CAMERA_ID = 1;
+      // Hold a pan / tilt / zoom button to move, release to stop
+      const ramp = (axis, value) =>
+        run(() =>
+          xapi.Command.Camera.Ramp({ CameraId: CAMERA_ID, [axis]: value }),
+        );
+      for (const btn of document.querySelectorAll("[data-ramp]")) {
+        const [axis, direction] = btn.dataset.ramp.split(":");
+        const stop = () => {
+          if (btn.dataset.moving) {
+            delete btn.dataset.moving;
+            ramp(axis, "Stop");
+          }
+        };
+        btn.addEventListener("pointerdown", () => {
+          btn.dataset.moving = "1";
+          ramp(axis, direction);
+        });
+        for (const type of ["pointerup", "pointerleave", "pointercancel"]) {
+          btn.addEventListener(type, stop);
+        }
+      }
+      $("cam-reset").onclick = () =>
+        run(async () => {
+          try {
+            await xapi.Command.Camera.PositionReset({ CameraId: CAMERA_ID });
+          } catch {
+            await xapi.Command.Camera.PositionSet({
+              CameraId: CAMERA_ID,
+              Pan: 0,
+              Tilt: 0,
+            });
+          }
+        });
+
+      const setFraming = (on) =>
+        run(async () => {
+          if (on) {
+            await xapi.Command.Cameras.PresenterTrack.Set({
+              Mode: "Off",
+            }).catch(() => {});
+            await xapi.Command.Cameras.SpeakerTrack.Activate();
+          } else {
+            await xapi.Command.Cameras.SpeakerTrack.Deactivate();
+          }
+          state.cameraMode = on ? "speaker" : "manual";
+          render();
+        });
+      $("cam-toggle").onclick = () =>
+        setFraming(state.cameraMode !== "speaker");
+      // Tapping an option sets the SpeakerTrack behaviour; the status event
+      // confirms it, but update now so the highlight does not lag.
+      for (const row of document.querySelectorAll("[data-framing]")) {
+        row.onclick = () =>
+          run(async () => {
+            const behavior = behaviorForFraming(row.dataset.framing);
+            await xapi.Command.Cameras.SpeakerTrack.Set({ Behavior: behavior });
+            state.speakerBehavior = behavior;
+            renderCameraModal();
+          });
+      }
+      $("mtrc-cam-more").onclick = openCameraModal;
+      $("cam-back").onclick = closeCameraModal;
+      $("cam-overlay").onclick = (event) => {
+        if (event.target === event.currentTarget) closeCameraModal();
+      };
+      $("mtrc-mic").onclick = () => $("btn-mic").onclick();
+      $("mtrc-video").onclick = () => $("btn-video").onclick();
+
+      const setVolume = (delta) =>
+        run(() =>
+          xapi.Command.Audio.Volume.Set({
+            Level: Math.min(100, Math.max(0, state.volume + delta)),
+          }),
+        );
+      $("vol-up").onclick = () => setVolume(VOLUME_STEP);
+      $("vol-down").onclick = () => setVolume(-VOLUME_STEP);
+      $("mtrc-vol-up").onclick = () => setVolume(VOLUME_STEP);
+      $("mtrc-vol-down").onclick = () => setVolume(-VOLUME_STEP);
+
+      for (const btn of document.querySelectorAll("[data-camera-mode]")) {
+        btn.onclick = () =>
+          run(async () => {
+            const mode = btn.dataset.cameraMode;
+            if (mode === "speaker") {
+              await xapi.Command.Cameras.PresenterTrack.Set({
+                Mode: "Off",
+              }).catch(() => {});
+              await xapi.Command.Cameras.SpeakerTrack.Activate();
+            } else if (mode === "presenter") {
+              await xapi.Command.Cameras.SpeakerTrack.Deactivate().catch(
+                () => {},
+              );
+              await xapi.Command.Cameras.PresenterTrack.Set({ Mode: "Follow" });
+            } else {
+              await xapi.Command.Cameras.SpeakerTrack.Deactivate().catch(
+                () => {},
+              );
+              await xapi.Command.Cameras.PresenterTrack.Set({
+                Mode: "Off",
+              }).catch(() => {});
+            }
+          });
+      }
+
+      $("view-halfwake").onclick = () =>
+        run(() => xapi.Command.Standby.Deactivate());
+
+      // ---- Start -----------------------------------------------------------
+      // Shows a canned scene instead of connecting (documentation screenshots)
+      function startDemo(name) {
+        const scene = demoScene(name);
+        if (!scene) throw new Error(`Unknown demo scene "${name}".`);
+        demoNow = DEMO_NOW;
+        viewOptions = scene.options;
+        Object.assign(state, scene.state);
+        $("connecting-text").textContent =
+          scene.connecting || `Connecting to ${DEMO_ADDRESS}`;
+        $("connecting-error").textContent = scene.error;
+        for (const id of ["room-name", "mtr-device-name", "mtrc-device-name"]) {
+          $(id).textContent = DEMO_DEVICE_NAME;
+        }
+        $("call-room-name").textContent = DEMO_DEVICE_NAME;
+        if (scene.bookings) {
+          state.bookings = parseBookings(demoBookings(DEMO_NOW), DEMO_NOW);
+        }
+        tickClock();
+        render();
+        if (scene.modal) openCameraModal();
+      }
+
+      try {
+        const params = parseHash();
+        if (params.demo) {
+          startDemo(String(params.demo));
+        } else {
+          viewOptions = {
+            mode: params.mode,
+            mtrDevice: params.mtrDevice,
+            calendar: params.calendar,
+          };
+          connect(params);
+        }
+      } catch (error) {
+        $("bad-hash-detail").textContent = error.message;
+        show("view-bad-hash");
       }
     </script>
   </body>

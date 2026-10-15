@@ -1,0 +1,61 @@
+flowchart LR
+
+    START(["Open PWA URL<br/>#hash"]) --> HASH_PRESENT
+    HASH_PRESENT{"Hash<br/>present?"}
+    HASH_DECODE{"Valid base64<br/>encoded JSON?"}
+    HASH_KEYS{"username, password<br/>& address set?"}
+    BAD_HASH["view-bad-hash<br/>Bad hash parameters"]
+    CONNECT_NEXT(["Connect to device"])
+
+    HASH_PRESENT -->|"Yes"| HASH_DECODE
+    HASH_DECODE -->|"Yes"| HASH_KEYS
+    HASH_KEYS -->|"Yes"| CONNECT_NEXT
+    HASH_PRESENT -->|"No"| BAD_HASH
+    HASH_DECODE -->|"No"| BAD_HASH
+    HASH_KEYS -->|"No"| BAD_HASH
+
+    %% Animation (read by scripts/build-mermaid-svgs.mjs; see its header comment for the syntax)
+    %% @timing step=0.7 hold=1.6 gap=0.5 fade=0.2 delay=1.2
+    %% @scenario No Hash Parameters
+    %%   node START
+    %%   edge START -> HASH_PRESENT
+    %%   node HASH_PRESENT ended
+    %%   delay 0.4
+    %%   group
+    %%     edge HASH_PRESENT -> BAD_HASH ended
+    %%     node BAD_HASH ended | view-bad-hash | Missing URL | Hash Parameters
+    %%   endgroup
+    %% @scenario Invalid Hash (not base64 JSON)
+    %%   node START
+    %%   edge START -> HASH_PRESENT
+    %%   node HASH_PRESENT
+    %%   edge HASH_PRESENT -> HASH_DECODE
+    %%   node HASH_DECODE ended
+    %%   delay 0.4
+    %%   group
+    %%     edge HASH_DECODE -> BAD_HASH ended
+    %%     node BAD_HASH ended | view-bad-hash | Invalid Hash
+    %%   endgroup
+    %% @scenario Missing Parameter
+    %%   node START
+    %%   edge START -> HASH_PRESENT
+    %%   node HASH_PRESENT
+    %%   edge HASH_PRESENT -> HASH_DECODE
+    %%   node HASH_DECODE
+    %%   edge HASH_DECODE -> HASH_KEYS
+    %%   node HASH_KEYS ended
+    %%   delay 0.4
+    %%   group
+    %%     edge HASH_KEYS -> BAD_HASH ended
+    %%     node BAD_HASH ended | view-bad-hash | Missing | "password" | Parameter
+    %%   endgroup
+    %% @scenario Valid Hash
+    %%   node START
+    %%   edge START -> HASH_PRESENT
+    %%   node HASH_PRESENT
+    %%   edge HASH_PRESENT -> HASH_DECODE
+    %%   node HASH_DECODE
+    %%   edge HASH_DECODE -> HASH_KEYS
+    %%   node HASH_KEYS
+    %%   edge HASH_KEYS -> CONNECT_NEXT
+    %%   node CONNECT_NEXT

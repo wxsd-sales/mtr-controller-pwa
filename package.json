@@ -11,13 +11,16 @@
     "apply-config": "node scripts/apply-config.mjs",
     "remove-setup": "node scripts/remove-setup.mjs",
     "serve": "node scripts/serve.mjs",
+    "serve:lan": "node scripts/serve.mjs --lan",
     "screenshots": "node scripts/screenshot.mjs",
     "deploy:macro": "node scripts/deploy-macro.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watchAll --runInBand"
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watchAll --runInBand",
+    "diagrams": "node scripts/build-mermaid-svgs.mjs",
+    "diagrams:publish": "node scripts/build-mermaid-svgs.mjs --publish"
   },
   "engines": {
     "node": ">=20"
@@ -36,6 +39,7 @@
     "jest": "^30.4.2",
     "jest-mock-xapi": "^1.0.6",
     "jsxapi": "^6.0.0",
-    "prettier": "^3.9.6"
+    "prettier": "^3.9.6",
+    "@mermaid-js/mermaid-cli": "12.0.0"
   }
 }

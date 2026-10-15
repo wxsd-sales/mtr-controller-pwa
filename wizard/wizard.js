@@ -1,4 +1,16 @@
-import { buildSnippet, injectConfig } from "./snippet.js";
+import { buildZip } from "./zip.js";
+import {
+  BUNDLE_FAVICON,
+  BUNDLE_FILES,
+  bundleReadme,
+  rewriteIndex,
+} from "./webapp-bundle.js";
+import {
+  buildSnippet,
+  injectConfig,
+  DEFAULT_MODE,
+  MODE_OPTIONS,
+} from "./snippet.js";
 
 const config = window.APP_CONFIG ?? {};
 
@@ -27,13 +39,22 @@ const MACRO_SOURCE_URL = "../macros/main.js";
   const hasButtonInput = document.getElementById("has-button");
   const buttonNameField = document.getElementById("button-name-field");
   const buttonNameInput = document.getElementById("button-name");
+  const defaultModeInput = document.getElementById("default-mode");
+  const showCalendarInput = document.getElementById("show-calendar");
   const webappUrlInput = document.getElementById("webapp-url");
   const output = document.getElementById("output");
   const copyButton = document.getElementById("copy-button");
   const downloadButton = document.getElementById("download-button");
   const exportStatus = document.getElementById("export-status");
 
-  if (!hasButtonInput || !buttonNameInput || !webappUrlInput || !output) {
+  if (
+    !hasButtonInput ||
+    !buttonNameInput ||
+    !defaultModeInput ||
+    !showCalendarInput ||
+    !webappUrlInput ||
+    !output
+  ) {
     return;
   }
 
@@ -41,6 +62,10 @@ const MACRO_SOURCE_URL = "../macros/main.js";
   // MACRO_NAME is fixed to the project's identity - the button label is a
   // separate, editable, human-facing value that defaults to the title.
   buttonNameInput.value = config.buttonName ?? config.title ?? "";
+  defaultModeInput.value = MODE_OPTIONS.includes(config.defaultMode)
+    ? config.defaultMode
+    : DEFAULT_MODE;
+  showCalendarInput.checked = config.showCalendar === true;
   webappUrlInput.value = config.webappUrl ?? "";
 
   const syncButtonNameVisibility = () => {
@@ -53,6 +78,8 @@ const MACRO_SOURCE_URL = "../macros/main.js";
   const getValues = () => ({
     name: config.name ?? "",
     hasButton: hasButtonInput.checked,
+    defaultMode: defaultModeInput.value,
+    showCalendar: showCalendarInput.checked,
     buttonName: buttonNameInput.value.trim(),
     webappUrl: webappUrlInput.value.trim(),
   });
@@ -85,6 +112,8 @@ const MACRO_SOURCE_URL = "../macros/main.js";
     updatePreview();
   });
   buttonNameInput.addEventListener("input", updatePreview);
+  defaultModeInput.addEventListener("change", updatePreview);
+  showCalendarInput.addEventListener("change", updatePreview);
   webappUrlInput.addEventListener("input", updatePreview);
   updatePreview();
 
@@ -157,6 +186,92 @@ const MACRO_SOURCE_URL = "../macros/main.js";
       setExportStatus(`Downloaded ${fileName}.`, "success");
     });
   }
+})();
+
+/* Export Web App: download a static copy of the web app as a zip. */
+(function initExportWebapp() {
+  const hostInput = document.getElementById("host-url");
+  const webappUrlInput = document.getElementById("webapp-url");
+  const downloadButton = document.getElementById("download-webapp-button");
+  const status = document.getElementById("webapp-export-status");
+  if (!hostInput || !webappUrlInput || !downloadButton || !status) return;
+
+  // The two inputs are one value: the URL the exported macro points at.
+  hostInput.value = webappUrlInput.value;
+  hostInput.addEventListener("input", () => {
+    webappUrlInput.value = hostInput.value;
+    webappUrlInput.dispatchEvent(new Event("input"));
+  });
+  webappUrlInput.addEventListener("input", () => {
+    hostInput.value = webappUrlInput.value;
+  });
+
+  const setStatus = (message, kind = "") => {
+    status.textContent = message;
+    if (kind) status.dataset.kind = kind;
+    else delete status.dataset.kind;
+  };
+
+  const fetchBytes = async (path) => {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+    return new Uint8Array(await response.arrayBuffer());
+  };
+
+  downloadButton.addEventListener("click", async () => {
+    setStatus("");
+    const encoder = new TextEncoder();
+    let files;
+    try {
+      files = await Promise.all(
+        BUNDLE_FILES.map(async (name) => {
+          const data = await fetchBytes(`../webapp/${name}`);
+          return {
+            name,
+            data:
+              name === "index.html"
+                ? encoder.encode(rewriteIndex(new TextDecoder().decode(data)))
+                : data,
+          };
+        }),
+      );
+      files.push({
+        name: BUNDLE_FAVICON.name,
+        data: await fetchBytes(BUNDLE_FAVICON.from),
+      });
+    } catch {
+      setStatus(
+        "Could not load the web app files. Open the wizard from its hosted site and try again.",
+        "error",
+      );
+      return;
+    }
+    files.push({
+      name: "README.txt",
+      data: encoder.encode(
+        bundleReadme({
+          title: config.title,
+          hostUrl: hostInput.value.trim(),
+        }),
+      ),
+    });
+
+    const base =
+      (config.name || "web-app")
+        .replace(/[^a-zA-Z0-9-_]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "web-app";
+    const fileName = `${base}-webapp.zip`;
+    const blob = new Blob([buildZip(files)], { type: "application/zip" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`Downloaded ${fileName}.`, "success");
+  });
 })();
 
 /*
@@ -298,6 +413,13 @@ const MACRO_SOURCE_URL = "../macros/main.js";
       }
     });
   };
+
+  // "#tab=<panel id>" opens a tab directly (used for the README screenshots),
+  // e.g. #tab=export-webapp. It can sit alongside "#theme=dark".
+  const raw = window.location.hash.replace(/^#/, "");
+  const wanted = raw ? new URLSearchParams(raw).get("tab") : null;
+  const linked = tabs.find((tab) => tab.dataset.tabTarget === wanted);
+  if (linked) activate(linked);
 
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activate(tab));

@@ -32,9 +32,35 @@ describe("loadConfig", () => {
     expect(cfg.webappUrl).toBe(`${cfg.pagesBaseUrl}/webapp/`);
     expect(cfg.repoUrl).toBe(`https://github.com/${cfg.org}/${cfg.repo}`);
   });
+
+  test("defaultMode is a valid mode", async () => {
+    const cfg = await loadConfig();
+    expect(["Auto", "RoomOS Only", "MTR Only"]).toContain(cfg.defaultMode);
+  });
 });
 
 describe("applyConfig", () => {
+  test("writes HAS_BUTTON and DEFAULT_MODE into the macro and web app config", async () => {
+    const cfg = await applyConfig();
+    const files = await snapshot();
+    expect(files["macros/main.js"]).toContain(
+      `const HAS_BUTTON = ${cfg.hasButton};`,
+    );
+    expect(files["macros/main.js"]).toContain(
+      `const DEFAULT_MODE = ${JSON.stringify(cfg.defaultMode)};`,
+    );
+    expect(files["macros/main.js"]).toContain(
+      `const SHOW_CALENDAR = ${cfg.showCalendar};`,
+    );
+    const appConfig = await readFile(
+      join(ROOT, "wizard/app-config.js"),
+      "utf8",
+    );
+    expect(appConfig).toContain(
+      `"defaultMode": ${JSON.stringify(cfg.defaultMode)}`,
+    );
+  }, 20000);
+
   test("is idempotent across managed files", async () => {
     // Normalise to the current config, then re-run and assert nothing changes.
     await applyConfig();

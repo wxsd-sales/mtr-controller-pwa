@@ -1,0 +1,58 @@
+name: Build diagram images
+
+# Regenerates images/*.svg from diagrams/*.mmd with `npm run diagrams:publish`. The build script only
+# rewrites an image when the rendered output differs, so changes with no visual or animation impact
+# produce no commit. The script refuses to write images/ anywhere except GitHub Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "diagrams/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-diagrams
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # ubuntu-latest already ships Google Chrome, so skip puppeteer's own Chrome download
+      # (--ignore-scripts skips its postinstall) and point the build at the system browser instead.
+      - name: Install mermaid-cli (exact versions from package-lock.json)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Locate system Chrome
+        run: |
+          CHROME="$(command -v google-chrome || true)"
+          test -n "$CHROME" || { echo "google-chrome not found on this runner"; exit 1; }
+          echo "PUPPETEER_EXECUTABLE_PATH=$CHROME" >> "$GITHUB_ENV"
+
+      # GITHUB_ACTIONS (set by the runner) is what allows writing to images/; CI selects --no-sandbox
+      - name: Build SVGs
+        run: npm run diagrams:publish
+
+      - name: Commit updated images
+        run: |
+          if [ -z "$(git status --porcelain images)" ]; then
+            echo "No visual changes, images are up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images
+          git commit -m "docs: regenerate diagram images"
+          git push

@@ -46,8 +46,19 @@
     },
     "hasButton": {
       "type": "boolean",
-      "description": "Whether the macro adds a home-screen button that opens the web app. Not every macro needs one.",
+      "description": "Whether the macro adds a control-panel button with a mode selector (Auto / RoomOS Only / MTR Only) so a demo can force the web app's look. Not every macro needs one.",
       "default": true
+    },
+    "defaultMode": {
+      "type": "string",
+      "enum": ["Auto", "RoomOS Only", "MTR Only"],
+      "default": "Auto",
+      "description": "How the web app is themed until someone picks a mode on the button (or always, when hasButton is false). Auto follows the device: MTR theme on an MTR device. RoomOS Only / MTR Only force one look."
+    },
+    "showCalendar": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the web app's MTR home screen shows a room calendar (booked meetings from Bookings List) beside the action icons. When false the icons are centred on the screen."
     },
     "buttonName": {
       "type": "string",

@@ -2,6 +2,7 @@ import { readFile, writeFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_MODE, MODE_OPTIONS } from "../wizard/snippet.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -21,6 +22,15 @@ export async function loadConfig() {
     }
   }
 
+  if (
+    raw.defaultMode !== undefined &&
+    !MODE_OPTIONS.includes(raw.defaultMode)
+  ) {
+    throw new Error(
+      `project.config.json: "defaultMode" must be one of ${MODE_OPTIONS.join(", ")}.`,
+    );
+  }
+
   const pagesBaseUrl = `https://${raw.org}.github.io/${raw.repo}`;
   return {
     ...raw,
@@ -28,6 +38,8 @@ export async function loadConfig() {
     description: raw.description ?? "",
     webapp: raw.webapp !== false,
     hasButton: raw.hasButton !== false,
+    defaultMode: raw.defaultMode ?? DEFAULT_MODE,
+    showCalendar: raw.showCalendar === true,
     // The button name is a separate, human-facing label from the project's
     // kebab-case "name" - default it to the display title when unset.
     buttonName: raw.buttonName || raw.title,
@@ -99,6 +111,8 @@ function appConfigFile(cfg) {
     name: cfg.name,
     title: cfg.title,
     hasButton: cfg.hasButton,
+    defaultMode: cfg.defaultMode,
+    showCalendar: cfg.showCalendar,
     buttonName: cfg.buttonName,
     pagesBaseUrl: cfg.pagesBaseUrl,
     wizardUrl: cfg.wizardUrl,
@@ -159,6 +173,8 @@ export async function applyConfig() {
     `const MACRO_NAME = ${JSON.stringify(cfg.name)};`,
     `const WEBAPP_URL = ${JSON.stringify(cfg.webappUrl)};`,
     `const HAS_BUTTON = ${JSON.stringify(cfg.hasButton)};`,
+    `const DEFAULT_MODE = ${JSON.stringify(cfg.defaultMode)};`,
+    `const SHOW_CALENDAR = ${JSON.stringify(cfg.showCalendar)};`,
     `const BUTTON_NAME = ${JSON.stringify(cfg.buttonName)};`,
   ].join("\n");
   for (const filePath of await listJsFiles(join(ROOT, "macros"))) {

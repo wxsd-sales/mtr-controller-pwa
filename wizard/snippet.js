@@ -7,6 +7,12 @@
 export const CONFIG_START = "// CONFIG:start";
 export const CONFIG_END = "// CONFIG:end";
 
+// How the web app is themed. Auto follows the device (MTR theme on an MTR
+// device); RoomOS Only / MTR Only force one look, e.g. to demo the MTR views
+// on a RoomOS device. Also the values of the macro's mode button.
+export const MODE_OPTIONS = ["Auto", "RoomOS Only", "MTR Only"];
+export const DEFAULT_MODE = "Auto";
+
 /**
  * Build the CONFIG block (markers included) for the given values.
  */
@@ -14,13 +20,18 @@ export function buildSnippet({
   name = "",
   webappUrl = "",
   hasButton = true,
+  defaultMode = DEFAULT_MODE,
+  showCalendar = false,
   buttonName = "",
 } = {}) {
+  const mode = MODE_OPTIONS.includes(defaultMode) ? defaultMode : DEFAULT_MODE;
   return [
     CONFIG_START,
     `const MACRO_NAME = ${JSON.stringify(name)};`,
     `const WEBAPP_URL = ${JSON.stringify(webappUrl)};`,
     `const HAS_BUTTON = ${JSON.stringify(Boolean(hasButton))};`,
+    `const DEFAULT_MODE = ${JSON.stringify(mode)};`,
+    `const SHOW_CALENDAR = ${JSON.stringify(Boolean(showCalendar))};`,
     `const BUTTON_NAME = ${JSON.stringify(buttonName)};`,
     CONFIG_END,
   ].join("\n");

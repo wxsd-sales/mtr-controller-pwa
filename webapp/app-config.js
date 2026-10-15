@@ -2,7 +2,9 @@
 window.APP_CONFIG = {
   "name": "mtr-controller-pwa",
   "title": "MTR Controller PWA",
-  "hasButton": false,
+  "hasButton": true,
+  "defaultMode": "Auto",
+  "showCalendar": false,
   "buttonName": "MTR Controller PWA",
   "pagesBaseUrl": "https://wxsd-sales.github.io/mtr-controller-pwa",
   "wizardUrl": "https://wxsd-sales.github.io/mtr-controller-pwa/wizard/",

@@ -1,0 +1,122 @@
+flowchart LR
+
+    READY(["Connection ready"]) --> SUBSCRIBE
+    
+    subgraph SUBSCRIBE["xStatus Get & Subscribe"]
+        STANDY_STATUS(["Standby Status"])
+        TEAMS_INCALL_STATUS(["Teams InCall Status"])
+        ACTIVECALLS_STATUS(["ActiveCalls Status"])
+        MUTE_STATUS(["Mute Status"])
+        VOLUME_STATUS(["Volume Status"])
+    end
+
+    IN_CALL{"In a call?"}
+    CALL_TYPE{"Teams<br/>InCall?"}
+    STANDBY_STATE{"Standby.State"}
+    VIEW_MTR["view-call<br/>Microsoft Teams call"]
+    VIEW_ROOMOS["view-call<br/>Call in progress<br/>(RoomOS)"]
+    VIEW_HOME["view-home"]
+    VIEW_HALFWAKE["view-halfwake"]
+    VIEW_STANDBY["view-standby<br/>(black screen)"]
+
+    SUBSCRIBE -->|"Runs on every<br/>status change"| IN_CALL
+    IN_CALL -->|"Yes"| CALL_TYPE
+    IN_CALL -->|"No"| STANDBY_STATE
+    CALL_TYPE -->|"Yes"| VIEW_MTR
+    CALL_TYPE -->|"No"| VIEW_ROOMOS
+    STANDBY_STATE -->|"Off"| VIEW_HOME
+    STANDBY_STATE -->|"Halfwake"| VIEW_HALFWAKE
+    STANDBY_STATE -->|"Standby"| VIEW_STANDBY
+
+    %% Animation (read by scripts/build-mermaid-svgs.mjs; see its header comment for the syntax)
+    %% @timing step=0.7 hold=1.6 gap=0.5 fade=0.2 delay=1.2
+    %% @scenario Subscribed, Device Awake
+    %%  group
+    %%   node READY
+    %%   edge READY -> SUBSCRIBE
+    %%  endgroup
+    %%  group
+    %%   node SUBSCRIBE
+    %%   edge SUBSCRIBE -> IN_CALL
+    %%  endgroup
+    %%  group
+    %%   node IN_CALL
+    %%   edge IN_CALL -> STANDBY_STATE
+    %%  endgroup
+    %%  group
+    %%   node STANDBY_STATE
+    %%   edge STANDBY_STATE -> VIEW_HOME
+    %%  endgroup
+    %%   node VIEW_HOME
+    %% @scenario Subscribed, Halfwake
+    %%  group
+    %%   node READY
+    %%   edge READY -> SUBSCRIBE
+    %%  endgroup
+    %%  group
+    %%   node SUBSCRIBE
+    %%   edge SUBSCRIBE -> IN_CALL
+    %%  endgroup
+    %%  group
+    %%   node IN_CALL
+    %%   edge IN_CALL -> STANDBY_STATE
+    %%  endgroup
+    %%  group
+    %%   node STANDBY_STATE
+    %%   edge STANDBY_STATE -> VIEW_HALFWAKE
+    %%  endgroup
+    %%   node VIEW_HALFWAKE
+    %% @scenario Subscribed, Standby
+    %%  group
+    %%   node READY
+    %%   edge READY -> SUBSCRIBE
+    %%  endgroup
+    %%  group
+    %%   node SUBSCRIBE
+    %%   edge SUBSCRIBE -> IN_CALL
+    %%  endgroup
+    %%  group
+    %%   node IN_CALL
+    %%   edge IN_CALL -> STANDBY_STATE
+    %%  endgroup
+    %%  group
+    %%   node STANDBY_STATE
+    %%   edge STANDBY_STATE -> VIEW_STANDBY
+    %%  endgroup
+    %%   node VIEW_STANDBY
+    %% @scenario Subscribed, Microsoft Teams Call
+    %%  group
+    %%   node READY
+    %%   edge READY -> SUBSCRIBE
+    %%  endgroup
+    %%  group
+    %%   node SUBSCRIBE
+    %%   edge SUBSCRIBE -> IN_CALL
+    %%  endgroup
+    %%  group
+    %%   node IN_CALL
+    %%   edge IN_CALL -> CALL_TYPE
+    %%  endgroup
+    %%  group
+    %%   node CALL_TYPE
+    %%   edge CALL_TYPE -> VIEW_MTR
+    %%  endgroup
+    %%   node VIEW_MTR
+    %% @scenario Subscribed, RoomOS Call
+    %%  group
+    %%   node READY
+    %%   edge READY -> SUBSCRIBE
+    %%  endgroup
+    %%  group
+    %%   node SUBSCRIBE
+    %%   edge SUBSCRIBE -> IN_CALL
+    %%  endgroup
+    %%  group
+    %%   node IN_CALL
+    %%   edge IN_CALL -> CALL_TYPE
+    %%  endgroup
+    %%  group
+    %%   node CALL_TYPE
+    %%   edge CALL_TYPE -> VIEW_ROOMOS
+    %%  endgroup
+    %%   node VIEW_ROOMOS
