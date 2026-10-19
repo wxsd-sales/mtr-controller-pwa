@@ -122,12 +122,9 @@ The web app is static (served from GitHub Pages) and does everything in the brow
 
     </details>
 
-
 2. **Connects** to the device with `jsxapi` over `wss`, retrying every few seconds if it fails.
 3. **Queries, then subscribes** to the xStatus values it needs: standby state, Teams call state, active calls, volume, mute states, camera mode, presentation, SpeakerTrack behaviour and bookings.
 4. **Picks a view** on every status change, then themes it from `mtrDevice` and `mode`.
-
-
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/pwa-connect-dark.svg">
