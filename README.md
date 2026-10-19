@@ -109,15 +109,25 @@ The hash looks like this (`demo` is only used for the documentation screenshots)
 The web app is static (served from GitHub Pages) and does everything in the browser:
 
 1. **Reads the URL hash** and shows an error view if it is missing or incomplete.
+
+    <details>
+
+    <summary>Web App Hash Parameter Flowchart</summary>
+
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/pwa-hash-params-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="assets/pwa-hash-params-light.svg">
+      <img alt="Animated flow of the web app checking its URL hash parameters" src="assets/pwa-hash-params-light.svg">
+    </picture>
+
+    </details>
+
+
 2. **Connects** to the device with `jsxapi` over `wss`, retrying every few seconds if it fails.
 3. **Queries, then subscribes** to the xStatus values it needs: standby state, Teams call state, active calls, volume, mute states, camera mode, presentation, SpeakerTrack behaviour and bookings.
 4. **Picks a view** on every status change, then themes it from `mtrDevice` and `mode`.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/pwa-hash-params-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/pwa-hash-params-light.svg">
-  <img alt="Animated flow of the web app checking its URL hash parameters" src="assets/pwa-hash-params-light.svg">
-</picture>
+
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/pwa-connect-dark.svg">

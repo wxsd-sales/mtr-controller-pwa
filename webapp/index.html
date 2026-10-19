@@ -1104,7 +1104,8 @@
                 type="button"
               >
                 <span class="cam-option-label"
-                  ><i class="icon icon-studio-mode-regular"></i>IntelliFrame</span
+                  ><i class="icon icon-studio-mode-regular"></i
+                  >IntelliFrame</span
                 ><span class="cam-option-desc"
                   >Enhances focus and framing of in-room attendees</span
                 >
@@ -1809,8 +1810,13 @@
           });
       }
 
-      $("view-halfwake").onclick = () =>
-        run(() => xapi.Command.Standby.Deactivate());
+      // Tapping anywhere on the blank standby or halfwake screen wakes the device,
+      // as it does on RoomOS, in the MTR theme as well.
+      for (const id of ["view-standby", "view-halfwake"]) {
+        $(id).addEventListener("click", () =>
+          run(() => xapi.Command.Standby.Deactivate()),
+        );
+      }
 
       // ---- Start -----------------------------------------------------------
       // Shows a canned scene instead of connecting (documentation screenshots)
