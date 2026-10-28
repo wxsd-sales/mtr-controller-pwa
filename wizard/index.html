@@ -331,7 +331,8 @@
           >
             <h2>Export Macro</h2>
             <p>
-              Copy this block and paste it between the
+              Download the complete macro (the config is already filled in), or
+              copy just the generated config block to paste between the
               <code>// CONFIG:start</code> and
               <code>// CONFIG:end</code> markers in <code>macros/main.js</code>.
             </p>
@@ -369,6 +370,45 @@
                 aria-live="polite"
               ></p>
             </div>
+
+            <h3>Load the macro on the MTR device</h3>
+            <ol class="steps">
+              <li>
+                Click <strong>Download macro</strong> above to save the complete
+                macro, or click <strong>Copy config</strong> if you would rather
+                paste only the config into an existing copy of
+                <code>main.js</code>.
+              </li>
+              <li>
+                Open the Macro Editor, either on the device's web interface
+                (<strong>Customization</strong> &rsaquo;
+                <strong>Macro Editor</strong>) or in Control Hub (<strong
+                  >Devices</strong
+                >
+                &rsaquo; select the device &rsaquo; <strong>Macros</strong>).
+              </li>
+              <li>
+                To use the downloaded file, choose
+                <strong>Import from file</strong> and select it, or create a new
+                macro and paste its contents. To use only the config, open your
+                existing macro and replace everything between the
+                <code>// CONFIG:start</code> and
+                <code>// CONFIG:end</code> markers with the copied block.
+              </li>
+              <li>
+                Save the macro, then click its <strong>Activate</strong> toggle
+                so it turns blue. A blue toggle means the macro is activated and
+                running; if it is grey, the macro will not run.
+              </li>
+              <li>
+                Optional: to host the web app on your own server, continue to
+                the
+                <a href="#tab=export-webapp" data-goto-tab="export-webapp"
+                  >Export Web App</a
+                >
+                tab.
+              </li>
+            </ol>
           </section>
 
           <!-- Export Web App -->

@@ -421,6 +421,19 @@ const MACRO_SOURCE_URL = "../macros/main.js";
   const linked = tabs.find((tab) => tab.dataset.tabTarget === wanted);
   if (linked) activate(linked);
 
+  // In-page links (data-goto-tab="<panel id>") switch to another tab.
+  document.querySelectorAll("[data-goto-tab]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const target = tabs.find(
+        (tab) => tab.dataset.tabTarget === link.dataset.gotoTab,
+      );
+      if (!target) return;
+      event.preventDefault();
+      activate(target);
+      target.focus();
+    });
+  });
+
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activate(tab));
     tab.addEventListener("keydown", (event) => {
