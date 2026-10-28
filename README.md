@@ -155,8 +155,9 @@ The [wizard](https://wxsd-sales.github.io/mtr-controller-pwa/wizard/) is a small
 
 1. **Configure** the macro with the options below.
 2. **Export the macro** and add it to the MTR device's Macro Editor.
-3. Pair a Room Navigator with the device and set it to run the persistent web app. The macro fills in the URL it loads.
-4. Optional: **export the web app** to host it on your own static web server (for example Microsoft IIS), then enter that URL in the wizard and export the macro again. The macro keeps updating the URL hash on your server just the same.
+3. **Enable/Activate the macro** by clicking the toggle beside the macro's name so it shows blue on the left side of the devices Macro Editor.
+4. Pair a Room Navigator with the device and set it to run the persistent web app. The macro fills in the URL it loads.
+5. Optional: **export the web app** to host it on your own static web server (for example Microsoft IIS), then enter that URL in the wizard and export the macro again. The macro keeps updating the URL hash on your server just the same.
 
 | Setting       | Macro value     | What it does                                                          |
 | ------------- | --------------- | --------------------------------------------------------------------- |
