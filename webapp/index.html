@@ -592,16 +592,22 @@
       .mtrc-btn:active {
         background: rgba(255, 255, 255, 0.14);
       }
+      /* The camera and its chevron are one control: the whole group reacts. */
+      .mtrc-group-camera .mtrc-btn:active {
+        background: transparent;
+      }
+      .mtrc-group-camera:has(.mtrc-btn:active),
+      .mtrc-group-camera:has(.mtrc-btn:focus-visible) {
+        background: #565656;
+      }
+      .mtrc-group-camera .mtrc-btn:focus-visible {
+        outline: none;
+      }
       .mtrc-btn .icon {
         font-size: 2.2vw;
       }
       .mtrc-btn.muted .icon {
         color: #ff7b8a;
-      }
-      .mtrc-divider {
-        width: 1px;
-        height: 2.4vw;
-        background: #6a6a6a;
       }
       /* The speaker icon shows the level briefly when the volume changes. */
       .mtrc-level {
@@ -1034,16 +1040,15 @@
             <i class="icon icon-plus-regular"></i>
           </button>
         </div>
-        <div class="mtrc-group">
+        <div class="mtrc-group mtrc-group-camera">
           <button
             class="mtrc-btn"
             id="mtrc-video"
             type="button"
-            aria-label="Camera"
+            aria-label="Room Camera"
           >
-            <i class="icon icon-camera-on-filled"></i>
+            <i class="icon icon-adjust-video-regular"></i>
           </button>
-          <div class="mtrc-divider"></div>
           <button
             class="mtrc-btn"
             id="mtrc-cam-more"
@@ -1665,9 +1670,6 @@
         $("mtrc-mic").classList.toggle("muted", state.micMuted);
         $("mtrc-mic").querySelector(".icon").className =
           `icon icon-microphone-${state.micMuted ? "muted-" : ""}filled`;
-        $("mtrc-video").classList.toggle("muted", state.videoMuted);
-        $("mtrc-video").querySelector(".icon").className =
-          `icon icon-camera-${state.videoMuted ? "muted" : "on"}-filled`;
         renderCameraModal();
       }
 
@@ -1766,13 +1768,13 @@
             renderCameraModal();
           });
       }
+      $("mtrc-video").onclick = openCameraModal;
       $("mtrc-cam-more").onclick = openCameraModal;
       $("cam-back").onclick = closeCameraModal;
       $("cam-overlay").onclick = (event) => {
         if (event.target === event.currentTarget) closeCameraModal();
       };
       $("mtrc-mic").onclick = () => $("btn-mic").onclick();
-      $("mtrc-video").onclick = () => $("btn-video").onclick();
 
       const setVolume = (delta) =>
         run(() =>

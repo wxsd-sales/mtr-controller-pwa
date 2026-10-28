@@ -19,25 +19,25 @@ Anything else the MTR app does (joining or leaving calls, whiteboard, meeting de
 
 The MTR theme shows the date, time and device name at the top left, a Share button, and a square volume rocker on the right. Everything sits on a wallpaper drawn with CSS/SVG that captures the feel of the Teams Rooms one. Turn on the room calendar in the macro config and the room's bookings (from `Bookings.List`) appear on the right, with the Share button centred in the left half.
 
-|                                                    |                                                                |
-| -------------------------------------------------- | -------------------------------------------------------------- |
-| ![MTR home](assets/webapp-mtr-home.png)            | ![MTR home with calendar](assets/webapp-mtr-home-calendar.png) |
-| Home, calendar off: the Share button is centred    | Home, calendar on: bookings on the right                       |
-| ![MTR sharing](assets/webapp-mtr-home-sharing.png) | ![MTR halfwake](assets/webapp-mtr-halfwake.png)                |
-| While sharing the button becomes "Stop sharing"    | Halfwake and standby are plain black                           |
+|                                                                                                                                                        |                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [![MTR home](assets/webapp-mtr-home.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1ob21lIn0=)                        | [![MTR home with calendar](assets/webapp-mtr-home-calendar.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1ob21lLWNhbGVuZGFyIn0=) |
+| Home, calendar off: the Share button is centred                                                                                                        | Home, calendar on: bookings on the right                                                                                                                           |
+| [![MTR sharing](assets/webapp-mtr-home-sharing.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1ob21lLXNoYXJpbmcifQ==) | [![MTR halfwake](assets/webapp-mtr-halfwake.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1oYWxmd2FrZSJ9)                        |
+| While sharing the button becomes "Stop sharing"                                                                                                        | Halfwake and standby are plain black                                                                                                                               |
 
 The volume rocker shows a speaker icon and flashes the level for a couple of seconds whenever the volume changes, even when it was changed from another interface.
 
 ### In an MTR call
 
-Only the controls the xAPI allows are shown: volume, camera (tap to mute, chevron for camera settings) and microphone mute. The time and device name stay at the top left over the Teams-style purple background.
+Only the controls the xAPI allows are shown: volume, the Room Camera (tap the camera icon or the chevron to open it) and microphone mute. There is deliberately no video mute: the MTR container app mutes video itself rather than through RoomOS, so `Video Input MainVideoMute` doesn't follow the native MTR UI, and the two interfaces could never agree on the state. The time and device name stay at the top left over the Teams-style purple background.
 
-|                                                             |                                                            |
-| ----------------------------------------------------------- | ---------------------------------------------------------- |
-| ![MTR call](assets/webapp-mtr-call.png)                     | ![MTR call muted](assets/webapp-mtr-call-muted.png)        |
-| In a call                                                   | Camera and microphone muted                                |
-| ![Enhanced framing](assets/webapp-mtr-call-camera-auto.png) | ![Manual camera](assets/webapp-mtr-call-camera-manual.png) |
-| Room Camera: enhanced framing on                            | Room Camera: manual pan, tilt and zoom                     |
+|                                                                                                                                                                     |                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![MTR call](assets/webapp-mtr-call.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1jYWxsIn0=)                                     | [![MTR call muted](assets/webapp-mtr-call-muted.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1jYWxsLW11dGVkIn0=)                    |
+| In a call                                                                                                                                                           | Microphone muted                                                                                                                                                       |
+| [![Enhanced framing](assets/webapp-mtr-call-camera-auto.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1jYWxsLWNhbWVyYS1hdXRvIn0=) | [![Manual camera](assets/webapp-mtr-call-camera-manual.png)](https://wxsd-sales.github.io/mtr-controller-pwa/webapp/#eyJkZW1vIjogIm10ci1jYWxsLWNhbWVyYS1tYW51YWwifQ==) |
+| Room Camera: enhanced framing on                                                                                                                                    | Room Camera: manual pan, tilt and zoom                                                                                                                                 |
 
 The Room Camera modal closes with the back arrow or by tapping outside it. The enhanced framing options map to the SpeakerTrack behaviour on the device, and the highlighted one follows what the device reports:
 

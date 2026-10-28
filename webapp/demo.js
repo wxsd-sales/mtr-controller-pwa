@@ -42,7 +42,7 @@ export const DEMO_SCENES = {
   "mtr-call": { options: MTR, state: { mtrCall: true } },
   "mtr-call-muted": {
     options: MTR,
-    state: { mtrCall: true, micMuted: true, videoMuted: true },
+    state: { mtrCall: true, micMuted: true },
   },
   "mtr-call-camera-auto": {
     options: MTR,
