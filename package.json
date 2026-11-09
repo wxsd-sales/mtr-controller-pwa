@@ -40,6 +40,6 @@
     "jest-mock-xapi": "^1.0.6",
     "jsxapi": "^6.0.0",
     "prettier": "^3.9.6",
-    "@mermaid-js/mermaid-cli": "12.0.0"
+    "@mermaid-js/mermaid-cli": "12.2.0"
   }
 }
